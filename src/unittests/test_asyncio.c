@@ -199,7 +199,6 @@ BOOL verify_file_content(const char *filename, const char *expected_data, LONG e
 BOOL verify_file_lines(const char *filename, const char **expected_lines, LONG num_lines);
 BOOL create_test_file(const char *filename, const char *content, LONG length);
 LONG get_file_size(const char *filename);
-BOOL check_t_volume_available(void);
 
 /* AsyncIO helper functions */
 
@@ -401,39 +400,7 @@ LONG get_file_size(const char *filename)
     return -1;
 }
 
-/* Check if T: assign is available and writable */
-BOOL check_t_volume_available(void)
-{
-    BPTR test_file;
-    LONG io_error;
-    
-    TRACE("Checking T: assign availability");
-    
-    /* Try to create a test file in T: */
-    test_file = Open("T:asyncio_test_check", MODE_WRITE);
-    if (test_file != 0) {
-        Write(test_file, "test", 4);
-        Close(test_file);
-        
-        /* Try to read it back */
-        test_file = Open("T:asyncio_test_check", MODE_READ);
-        if (test_file != 0) {
-            Close(test_file);
-            DeleteFile("T:asyncio_test_check");
-            TRACE("T: assign is available and writable");
-            return TRUE;
-        } else {
-            io_error = IoErr();
-            printf("TRACE: T: assign read test failed: IoErr = %ld\n", io_error);
-        }
-    } else {
-        io_error = IoErr();
-        printf("TRACE: T: assign write test failed: IoErr = %ld\n", io_error);
-    }
-    
-    TRACE("T: assign is not available or not writable");
-    return FALSE;
-}
+
 
 /* Main test function */
 int main(int argc, char *argv[])
