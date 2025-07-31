@@ -1,15 +1,16 @@
 @Database AsyncIO.guide
-@$VER:    AsyncIO.guide 39.2 (2.9.97)
+@$VER:    AsyncIO.guide 39.3 (31.7.2025)
 @Author   Magnus Holmgren
 
 @Node Main AsyncIO.guide
 
 	@{FG highlight}@{U}@{B}AsyncIO library@{UB}@{UU}@{FG text}
 
-        Version 39.2
+        Version 39.3
 
 	Original code by Martin Taillefer
 	      updates by Magnus Holmgren
+		  refactoring for NDK3.2 by amigazen project
 
 
 AsyncIO is a library providing double buffered asyncronous IO to files in a
@@ -520,7 +521,7 @@ is needed in order to be able to resume seeking after a seek past EOF.
 	external reference to __asiolibversion will cause the autoopen code
 	to be linked.
 
-      *	Ouch. The DMakeFile/lib.def files contained some laws. As a result,
+      *	Ouch. The DMakeFile/lib.def files contained some flaws. As a result,
 	the DICE linker libraries (in dlib/) were not updated at all. Now
 	there should be fresh libraries for both DICE and SAS/C.
 
@@ -570,6 +571,13 @@ is needed in order to be able to resume seeking after a seek past EOF.
 	manage to do their job successfully when they really should fail
 	(and return -1).
 
+@{B}Version 39.3 - 31-Jul-2025@{UB}
+
+      *	Refactored code to build with SAS/C and NDK3.2
+	  * Added SFD file to support 21st century method of function prototypes
+	  * Update SMakefile
+	  * Added unit test
+
 @EndNode
 
 
@@ -581,7 +589,7 @@ is needed in order to be able to resume seeking after a seek past EOF.
 
 @{B}Martin Taillefer@{UB} wrote the original code.
 
-@{B}Magnus Holmgren@{UB} (that's me ;) "took over" the development in 1995, since I
+@{B}Magnus Holmgren@{UB} "took over" the development in 1995, since I
 had found a couple of bugs in SeekAsync(). I contacted Martin Taillefer
 about it, and asked if I could release new versions of AsyncIO, and he
 didn't complain.
@@ -593,14 +601,6 @@ which I was unaware of at the time).
 @{B}Michael B. Smith@{UB} wrote the FGetsAsync() and FGetsLenAsync() functions,
 which I added after some (really) minor changes.
 
-Most of the changes I have done are marked in the sources with a comment
-that starts with "MH:".
-
-If you want to contact me about something, feel free to send a message to:
-
-	cmh@lls.se 				(internet)
-	"Magnus Holmgren", 2:203/512.10		(fidonet)
-
-Please note that I don't poll the fidonet address that often. ;)
+@{B}amigazen project@{UB} refactored the code to build with NDK3.2 in 2025
 
 @EndNode
