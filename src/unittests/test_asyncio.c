@@ -1222,6 +1222,31 @@ BOOL test_char_operations(void)
         result = CloseAsync(file);
         TRACE_CLOSE(file, result);
         TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        
+        /* Wait for async operations to complete */
+        wait_for_async_operation();
+        
+        /* Verify the written content using dos.library */
+        {
+            BPTR verify_file = Open(TEST_FILE_NAME2, MODE_READ);
+            if (verify_file != 0) {
+                char verify_buffer[4];
+                LONG verify_read = Read(verify_file, verify_buffer, sizeof(verify_buffer));
+                Close(verify_file);
+                
+                if (verify_read == 3) {
+                    verify_buffer[3] = '\0';
+                    TRACE1("File verification: content '%s'", verify_buffer);
+                    TEST_ASSERT(verify_buffer[0] == 'X' && verify_buffer[1] == 'Y' && verify_buffer[2] == 'Z', 
+                               "File should contain 'XYZ'");
+                } else {
+                    printf("TRACE: File verification: expected 3 bytes, got %ld\n", verify_read);
+                }
+            } else {
+                TRACE1("File verification: could not open %s", TEST_FILE_NAME2);
+            }
+        }
+        
         TEST_PASS();
     } else {
         TEST_FAIL("OpenAsync failed");
