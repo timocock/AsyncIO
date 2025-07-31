@@ -4,6 +4,8 @@
 ###############################################################################
 
 NAME = test_asyncio
+NAME_SHARED = test_asyncio_shared
+NAME_STATIC = test_asyncio_static
 
 ###############################################################################
 
@@ -28,32 +30,56 @@ LFLAGS = addsym smallcode smalldata noicons batch stripdebug
 OBJS = \
 	test_asyncio.o
 
+OBJS_SHARED = \
+	test_asyncio_shared.o
+
+OBJS_STATIC = \
+	test_asyncio_static.o
+
 ###############################################################################
 
 LIBS = sc:lib/sc.lib sc:lib/scm.lib lib:small.lib lib:debug.lib
+LIBS_SHARED = sc:lib/sc.lib sc:lib/scm.lib lib:small.lib lib:debug.lib
+LIBS_STATIC = sc:lib/sc.lib sc:lib/scm.lib lib:small.lib lib:debug.lib /lib/asyncio.lib
 
 ###############################################################################
 
-all: $(NAME)
+all: $(NAME_SHARED) $(NAME_STATIC)
 
 ###############################################################################
 
-$(NAME): $(OBJS)
-	slink sc:lib/c.o $(OBJS) to $@ lib $(LIBS) $(LFLAGS) \
+$(NAME_SHARED): $(OBJS_SHARED)
+	slink sc:lib/c.o $(OBJS_SHARED) to $@ lib $(LIBS_SHARED) $(LFLAGS) \
 		map $@.map,fhx fwidth 32 pwidth 32 swidth 32
+
+$(NAME_STATIC): $(OBJS_STATIC)
+	slink sc:lib/c.o $(OBJS_STATIC) to $@ lib $(LIBS_STATIC) $(LFLAGS) \
+		map $@.map,fhx fwidth 32 pwidth 32 swidth 32
+
+# Legacy target for backward compatibility
+$(NAME): $(NAME_SHARED)
+	copy $(NAME_SHARED) $(NAME)
 
 ###############################################################################
 
 clean:
-	delete $(NAME) $(NAME).map $(OBJS)
+	delete $(NAME) $(NAME).map $(NAME_SHARED) $(NAME_SHARED).map $(NAME_STATIC) $(NAME_STATIC).map $(OBJS) $(OBJS_SHARED) $(OBJS_STATIC)
 
 ###############################################################################
 
-test: $(NAME)
+test: $(NAME_SHARED) $(NAME_STATIC)
 	run_tests
 
 ###############################################################################
 
 ###############################################################################
 
+test_asyncio_shared.o : test_asyncio.c 
+	Sc $(CFLAGS) DEF ASIO_SHARED_LIB OBJNAME $@ $<
+
+test_asyncio_static.o : test_asyncio.c 
+	Sc $(CFLAGS) OBJNAME $@ $<
+
+# Legacy compilation rule
 test_asyncio.o : test_asyncio.c 
+	Sc $(CFLAGS) DEF ASIO_SHARED_LIB OBJNAME $@ $< 

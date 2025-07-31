@@ -1,42 +1,50 @@
-# Amiga/C Build Artifacts
+# Amiga and C Development Exclusions
+
+# Object files
 *.o
+*.obj
+
+# Libraries
 *.lib
 *.library
 *.library.debug
 *.library.map
+
+# Debug files
 *.debug
 *.map
+*.sym
 
-# Amiga Development Files
-FD
-LVO
-PROTOS
-PRAGMAS
-RAM
-
-# Temporary Files
+# Temporary files
 *.tmp
 *.bak
+*.swp
 *~
 
-# IDE/Editor Files
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS Generated Files
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
-# Build Directories
-build/
-obj/
-debug/
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-*
+*.code-workspace
 
-# Documentation Build
-docs/build/
+# Log files
+*.log
 
-# Test Output
-test_output/
-*.test
+# Amiga specific
+*.lst
+*.cod
+*.gst
+*.map
+*.uaem
+a.out
+
+output.txt

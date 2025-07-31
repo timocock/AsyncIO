@@ -15,7 +15,7 @@
 #include <exec/resident.h>
 #include "rev.h"
 
-#include <clib/asyncio_protos.h>
+#include <proto/asyncio.h>
 
 _LIBCALL struct Library	*LibInit( _REG( d0 ) struct Library *, _REG( a0 ) APTR, _REG( a6 ) struct ExecBase * );
 _CALL    struct Library	*LibOpen( _REG( a6 ) struct Library * );

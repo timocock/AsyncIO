@@ -1,0 +1,10 @@
+FROM "Lib.o"+"OpenAsync.o"+"OpenAsyncFromFH.o"+"OpenAsyncFH.o"+"CloseAsync.o"+"SeekAsync.o"+"ReadAsync.o"+"WriteAsync.o"+"ReadCharAsync.o"+"WriteCharAsync.o"+"ReadLineAsync.o"+"WriteLineAsync.o"+"FGetsLenAsync.o"+"PeekAsync.o"+"WaitPacket.o"+"SendPacket.o"+"RequeuePacket.o"+"RecordAsyncFailure.o"
+TO "asyncio.library"
+LIB LIB:sc.lib LIB:amiga.lib
+ADDSYM
+SMALLCODE
+SMALLDATA
+STRIPDEBUG
+BATCH
+NOICONS
+
