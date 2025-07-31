@@ -229,7 +229,7 @@ BOOL verify_file_content(const char *filename, const char *expected_data, LONG e
         BPTR test_file = Open(filename, MODE_READ);
         if (test_file == 0) {
             io_error = IoErr();
-            TRACE2("File does not exist: %s (IoErr: %ld) - attempt %ld", filename, io_error, retry_count + 1);
+            printf("TRACE: File does not exist: %s (IoErr: %ld) - attempt %ld\n", filename, io_error, retry_count + 1);
             if (retry_count < 2) {
                 TRACE("Waiting 2 seconds before retry...");
                 Delay(100); /* 100 ticks = 2 seconds */
@@ -389,7 +389,7 @@ LONG get_file_size(const char *filename)
             return size;
         } else {
             io_error = IoErr();
-            TRACE2("Could not open file %s for size check: IoErr = %ld - attempt %ld", filename, io_error, retry_count + 1);
+            printf("TRACE: Could not open file %s for size check: IoErr = %ld - attempt %ld\n", filename, io_error, retry_count + 1);
             if (retry_count < 2) {
                 TRACE("Waiting 2 seconds before retry...");
                 Delay(100); /* 100 ticks = 2 seconds */
