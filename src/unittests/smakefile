@@ -18,12 +18,12 @@ DEBUG = symbolflush noopt
 CFLAGS = resopt idlen=64 comnest streq strmerge nostkchk \
 	includedir=include: includedir=//include \
 	$(OPTIMIZE) debug=$(DEBUG) \
-	params=register strsect=code mccons smallcode smalldata \
+	params=register strsect=code mccons \
 	unsignedchars nomultipleincludes structureequivalence \
-	optimizescheduler noversion noicons memorysize=small \
+	optimizescheduler noversion noicons \
 	stringsconst
 AFLAGS = -d
-LFLAGS = addsym smallcode smalldata noicons batch stripdebug
+LFLAGS = addsym noicons batch stripdebug nofastmem
 
 ###############################################################################
 
@@ -50,11 +50,13 @@ all: $(NAME_SHARED) $(NAME_STATIC)
 
 $(NAME_SHARED): $(OBJS_SHARED)
 	slink sc:lib/c.o $(OBJS_SHARED) to $@ lib $(LIBS_SHARED) $(LFLAGS) \
-		map $@.map,fhx fwidth 32 pwidth 32 swidth 32
+		map $@.map,fhx fwidth 32 pwidth 32 swidth 32 \
+		noautolink nofastmem
 
 $(NAME_STATIC): $(OBJS_STATIC)
 	slink sc:lib/c.o $(OBJS_STATIC) to $@ lib $(LIBS_STATIC) $(LFLAGS) \
-		map $@.map,fhx fwidth 32 pwidth 32 swidth 32
+		map $@.map,fhx fwidth 32 pwidth 32 swidth 32 \
+		noautolink nofastmem
 
 # Legacy target for backward compatibility
 $(NAME): $(NAME_SHARED)
