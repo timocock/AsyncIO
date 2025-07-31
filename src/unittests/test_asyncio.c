@@ -24,22 +24,22 @@ struct Library *AsyncIOBase;
 #define TEST_FILE_NAME2 "T:asyncio_test2.dat"
 #define MAX_LINE_LENGTH 256
 
-/* Test data - Diverse content with Latin-1 characters */
+/* Test data - Diverse content with Latin-1 characters (no newlines - WriteLineAsync adds them) */
 static const char *test_strings[] = {
-    "The quick brown fox jumps over the lazy dog\n",
-    "Pack my box with five dozen liquor jugs\n",
-    "How vexingly quick daft zebras jump!\n",
-    "The five boxing wizards jump quickly\n",
-    "Sphinx of black quartz, judge my vow\n",
-    "Amazingly few discotheques provide jukeboxes\n",
-    "Special characters: éèêëàáâäùúûüçñÿœæ\n",
-    "Numbers and symbols: 12345 67890 !@#$%^&*() _+-=[]{}|;':\",./<>?\n",
-    "Mixed content: ABC123!@# 456DEF789\n",
-    "Empty line follows:\n",
-    "\n",
-    "Line after empty line\n",
-    "Very long line that might span multiple buffers or require multiple async operations to complete properly in the double-buffered system\n",
-    "Final line with end-of-file marker\n",
+    "The quick brown fox jumps over the lazy dog",
+    "Pack my box with five dozen liquor jugs",
+    "How vexingly quick daft zebras jump!",
+    "The five boxing wizards jump quickly",
+    "Sphinx of black quartz, judge my vow",
+    "Amazingly few discotheques provide jukeboxes",
+    "Special characters: éèêëàáâäùúûüçñÿœæ",
+    "Numbers and symbols: 12345 67890 !@#$%^&*() _+-=[]{}|;':\",./<>?",
+    "Mixed content: ABC123!@# 456DEF789",
+    "Empty line follows:",
+    "",
+    "Line after empty line",
+    "Very long line that might span multiple buffers or require multiple async operations to complete properly in the double-buffered system",
+    "Final line with end-of-file marker",
     NULL
 };
 
@@ -891,7 +891,7 @@ BOOL test_line_operations(void)
     if (file) {
         for (i = 0; test_strings[i] != NULL; i++) {
             result = WriteLineAsync(file, (STRPTR)test_strings[i]);
-            TEST_ASSERT(result == strlen(test_strings[i]), "WriteLineAsync should write all bytes");
+            TEST_ASSERT(result == strlen(test_strings[i]) + 1, "WriteLineAsync should write string plus newline");
         }
         
         result = CloseAsync(file);
@@ -912,7 +912,7 @@ BOOL test_line_operations(void)
             TRACE_LINE_READ(file, buffer, sizeof(buffer), result);
             printf("TRACE: EXPECTED: '%s' (%ld bytes)\n", test_strings[i], strlen(test_strings[i]));
             printf("TRACE: VALIDATION: %s\n", (strcmp(buffer, test_strings[i]) == 0) ? "MATCH" : "MISMATCH");
-            TEST_ASSERT(result == strlen(test_strings[i]), "ReadLineAsync should read correct number of bytes");
+            TEST_ASSERT(result == strlen(test_strings[i]), "ReadLineAsync should read string without newline");
             TEST_ASSERT(strcmp(buffer, test_strings[i]) == 0, "ReadLineAsync should read correct data");
         }
         
