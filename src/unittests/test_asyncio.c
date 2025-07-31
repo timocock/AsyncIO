@@ -242,7 +242,7 @@ BOOL verify_file_content(const char *filename, const char *expected_data, LONG e
         Close(file);
         
         if (io_error != 0) {
-            TRACE2("Read error: IoErr = %ld", io_error);
+            printf("TRACE: Read error: IoErr = %ld\n", io_error);
             return FALSE;
         }
         
@@ -1103,7 +1103,7 @@ BOOL test_line_operations(void)
                 
                 if (verify_read > 0) {
                     verify_buffer[verify_read] = '\0';
-                    TRACE2("File verification: read %ld bytes", verify_read);
+                    printf("TRACE: File verification: read %ld bytes\n", verify_read);
                     TRACE1("File content: '%s'", verify_buffer);
                 } else {
                     TRACE("File verification: no data read");
