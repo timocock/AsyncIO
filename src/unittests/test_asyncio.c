@@ -36,6 +36,10 @@ static const char *test_strings[] = {
 /* Simple test data for binary operations */
 static const char *test_binary_data = "Binary test data";
 
+/* AsyncIO-specific test configuration */
+#define ASYNC_WAIT_TIME 100000  /* Microseconds to wait for async operations */
+#define ASYNC_RETRY_COUNT 10    /* Number of retries for async operations */
+
 /* Global variables for test tracking */
 static LONG test_count = 0;
 static LONG test_passed = 0;
@@ -151,6 +155,54 @@ BOOL test_error_handling(void);
 BOOL test_file_handle_operations(void);
 void cleanup_test_files(void);
 void print_test_summary(void);
+
+/* AsyncIO helper functions */
+void wait_for_async_operation(void);
+BOOL verify_file_content(const char *filename, const char *expected_data, LONG expected_length);
+
+/* AsyncIO helper functions */
+
+/* Wait for async operations to complete */
+void wait_for_async_operation(void)
+{
+    TRACE("Waiting for async operation to complete");
+    /* Give the file system time to complete background operations */
+    Delay(ASYNC_WAIT_TIME / 1000000, (ASYNC_WAIT_TIME % 1000000) / 1000);
+    TRACE("Async operation wait completed");
+}
+
+/* Verify file content using standard DOS operations */
+BOOL verify_file_content(const char *filename, const char *expected_data, LONG expected_length)
+{
+    BPTR file;
+    char buffer[256];
+    LONG bytes_read;
+    BOOL result = FALSE;
+    
+    TRACE2("Verifying file content: %s (expected %ld bytes)", filename, expected_length);
+    
+    file = Open(filename, MODE_READ);
+    if (file != 0) {
+        bytes_read = Read(file, buffer, sizeof(buffer) - 1);
+        Close(file);
+        
+        if (bytes_read == expected_length) {
+            buffer[bytes_read] = '\0';
+            if (strcmp(buffer, expected_data) == 0) {
+                TRACE("File content verification successful");
+                result = TRUE;
+            } else {
+                TRACE2("File content mismatch: expected '%s', got '%s'", expected_data, buffer);
+            }
+        } else {
+            TRACE2("File length mismatch: expected %ld, got %ld", expected_length, bytes_read);
+        }
+    } else {
+        TRACE1("Failed to open file for verification: %s", filename);
+    }
+    
+    return result;
+}
 
 /* Main test function */
 int main(int argc, char *argv[])
@@ -350,6 +402,14 @@ BOOL test_write_operations(void)
         result = CloseAsync(file);
         TRACE_CLOSE(file, result);
         TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        
+        /* Wait for async operations to complete */
+        wait_for_async_operation();
+        
+        /* Verify the file content using standard DOS operations */
+        TEST_ASSERT(verify_file_content(TEST_FILE_NAME, test_data, data_len), 
+                   "File content should match written data");
+        
         TEST_PASS();
     } else {
         TEST_FAIL("OpenAsync failed");
@@ -434,17 +494,17 @@ BOOL test_read_operations(void)
         TRACE("Reading first character");
         byte_read = ReadCharAsync(file);
         TRACE_CHAR_READ(file, byte_read);
-        TEST_ASSERT(byte_read == 'A', "ReadCharAsync should read 'A'");
+        TEST_ASSERT(byte_read == 'X', "ReadCharAsync should read 'X'");
         
         TRACE("Reading second character");
         byte_read = ReadCharAsync(file);
         TRACE_CHAR_READ(file, byte_read);
-        TEST_ASSERT(byte_read == 'B', "ReadCharAsync should read 'B'");
+        TEST_ASSERT(byte_read == 'Y', "ReadCharAsync should read 'Y'");
         
         TRACE("Reading third character");
         byte_read = ReadCharAsync(file);
         TRACE_CHAR_READ(file, byte_read);
-        TEST_ASSERT(byte_read == 'C', "ReadCharAsync should read 'C'");
+        TEST_ASSERT(byte_read == 'Z', "ReadCharAsync should read 'Z'");
         
         TRACE("Reading at EOF");
         byte_read = ReadCharAsync(file);
