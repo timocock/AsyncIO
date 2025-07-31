@@ -8,6 +8,8 @@
  * and verifies the results match expected behavior.
  */
 
+#include <dos/dos.h>
+
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <proto/asyncio.h>
@@ -171,7 +173,7 @@ void wait_for_async_operation(void)
 {
     TRACE("Waiting for async operation to complete");
     /* Give the file system time to complete background operations */
-    Delay(ASYNC_WAIT_TIME / 1000000, (ASYNC_WAIT_TIME % 1000000) / 1000);
+    Delay(ASYNC_WAIT_TIME / 1000000);
     TRACE("Async operation wait completed");
 }
 
@@ -215,17 +217,19 @@ BOOL verify_file_lines(const char *filename, const char **expected_lines, LONG n
     char buffer[256];
     LONG line_count = 0;
     BOOL result = TRUE;
+    STRPTR line_read;
     
     TRACE2("Verifying file lines: %s (%ld lines expected)", filename, num_lines);
     
     file = Open(filename, MODE_READ);
     if (file != 0) {
         while (line_count < num_lines && expected_lines[line_count] != NULL) {
-            LONG bytes_read = FGets(file, buffer, sizeof(buffer));
-            if (bytes_read > 0) {
+            line_read = FGets(file, buffer, sizeof(buffer));
+            if (line_read != NULL) {
                 /* Remove newline if present */
-                if (buffer[bytes_read - 1] == '\n') {
-                    buffer[bytes_read - 1] = '\0';
+                LONG len = strlen(buffer);
+                if (len > 0 && buffer[len - 1] == '\n') {
+                    buffer[len - 1] = '\0';
                 }
                 
                 if (strcmp(buffer, expected_lines[line_count]) != 0) {
@@ -236,7 +240,7 @@ BOOL verify_file_lines(const char *filename, const char **expected_lines, LONG n
                     TRACE2("Line %ld verified: '%s'", line_count + 1, buffer);
                 }
             } else {
-                TRACE2("Failed to read line %ld", line_count + 1);
+                TRACE1("Failed to read line %ld", line_count + 1);
                 result = FALSE;
             }
             line_count++;
@@ -1011,7 +1015,7 @@ BOOL test_sophisticated_files(void)
         TEST_ASSERT(result > 0, "ReadAsync should read data from test_data.txt");
         
         buffer[result] = '\0';
-        TRACE2("Read %ld bytes from test_data.txt", result);
+        TRACE1("Read %ld bytes from test_data.txt", result);
         
         result = CloseAsync(file);
         TRACE_CLOSE(file, result);
@@ -1044,7 +1048,7 @@ BOOL test_sophisticated_files(void)
         
         LONG content_length = strlen(sophisticated_content);
         
-        TRACE2("Writing sophisticated content (%ld bytes)", content_length);
+        TRACE1("Writing sophisticated content (%ld bytes)", content_length);
         result = WriteAsync(file, (APTR)sophisticated_content, content_length);
         TRACE_WRITE(file, (APTR)sophisticated_content, content_length, result);
         TEST_ASSERT(result == content_length, "WriteAsync should write all bytes");
@@ -1090,9 +1094,11 @@ BOOL test_sophisticated_files(void)
         TEST_ASSERT(result >= 0, "CloseAsync should succeed");
         
         /* Verify file size using dos.library */
-        LONG file_size = get_file_size("test_large.txt");
-        TRACE1("Large file size via dos.library: %ld", file_size);
-        TEST_ASSERT(file_size > 0, "Large file should have content");
+        {
+            LONG file_size = get_file_size("test_large.txt");
+            TRACE1("Large file size via dos.library: %ld", file_size);
+            TEST_ASSERT(file_size > 0, "Large file should have content");
+        }
         
         TEST_PASS();
     } else {
