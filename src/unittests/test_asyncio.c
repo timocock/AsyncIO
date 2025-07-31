@@ -367,17 +367,30 @@ int main(int argc, char *argv[])
     TRACE("Starting test suite execution");
     
     /* Track test results for dependency checking */
-    BOOL open_close_passed = FALSE;
-    BOOL write_ops_passed = FALSE;
-    BOOL read_ops_passed = FALSE;
-    BOOL seek_ops_passed = FALSE;
-    BOOL peek_ops_passed = FALSE;
-    BOOL line_ops_passed = FALSE;
-    BOOL char_ops_passed = FALSE;
-    BOOL error_handling_passed = FALSE;
-    BOOL file_handle_ops_passed = FALSE;
-    BOOL sophisticated_files_passed = FALSE;
-    BOOL file_copy_validation_passed = FALSE;
+    BOOL open_close_passed;
+    BOOL write_ops_passed;
+    BOOL read_ops_passed;
+    BOOL seek_ops_passed;
+    BOOL peek_ops_passed;
+    BOOL line_ops_passed;
+    BOOL char_ops_passed;
+    BOOL error_handling_passed;
+    BOOL file_handle_ops_passed;
+    BOOL sophisticated_files_passed;
+    BOOL file_copy_validation_passed;
+    
+    /* Initialize all test results to FALSE */
+    open_close_passed = FALSE;
+    write_ops_passed = FALSE;
+    read_ops_passed = FALSE;
+    seek_ops_passed = FALSE;
+    peek_ops_passed = FALSE;
+    line_ops_passed = FALSE;
+    char_ops_passed = FALSE;
+    error_handling_passed = FALSE;
+    file_handle_ops_passed = FALSE;
+    sophisticated_files_passed = FALSE;
+    file_copy_validation_passed = FALSE;
     
     /* Test 1: Open/Close operations (independent) */
     TRACE("=== Starting Test 1: Open/Close operations ===");
@@ -1261,7 +1274,7 @@ BOOL test_file_copy_validation(void)
     LONG result;
     char buffer[1024];
     LONG bytes_read, total_read = 0, total_written = 0;
-    LONG original_size, copied_size, verified_size;
+    LONG original_size, copied_size;
     BOOL data_matches = TRUE;
     LONG mismatch_count = 0;
     char original_buffer[1024], copied_buffer[1024];
@@ -1376,16 +1389,17 @@ BOOL test_file_copy_validation(void)
             if (memcmp(original_buffer, copied_buffer, orig_read) != 0) {
                 data_matches = FALSE;
                 mismatch_count++;
-                TRACE3("DATA MISMATCH at position %ld! Original vs Copy comparison failed", pos);
+                TRACE2("DATA MISMATCH at position %ld! Original vs Copy comparison failed", pos);
                 
                 /* Show first few bytes of mismatch */
                 if (orig_read > 0) {
+                    LONG i;
                     printf("TRACE: Original: ");
-                    for (int i = 0; i < (orig_read > 16 ? 16 : orig_read); i++) {
+                    for (i = 0; i < (orig_read > 16 ? 16 : orig_read); i++) {
                         printf("%02X ", (unsigned char)original_buffer[i]);
                     }
                     printf("\nTRACE: Copy:     ");
-                    for (int i = 0; i < (orig_read > 16 ? 16 : orig_read); i++) {
+                    for (i = 0; i < (orig_read > 16 ? 16 : orig_read); i++) {
                         printf("%02X ", (unsigned char)copied_buffer[i]);
                     }
                     printf("\n");
