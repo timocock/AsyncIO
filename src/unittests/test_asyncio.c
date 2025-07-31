@@ -85,6 +85,17 @@ int main(int argc, char *argv[])
     printf("=== AsyncIO Library Unit Test Suite ===\n");
     printf("Testing all functions from asyncio.doc\n\n");
 
+#ifdef ASIO_SHARED_LIB
+    /* Open the asyncio.library for shared library version */
+    AsyncIOBase = OpenLibrary("asyncio.library", 0);
+    if (AsyncIOBase == NULL) {
+        printf("ERROR: Failed to open asyncio.library\n");
+        printf("IoErr: %ld\n", IoErr());
+        return 1;
+    }
+    printf("Successfully opened asyncio.library\n");
+#endif
+
     /* Initialize test counters */
     test_count = 0;
     test_passed = 0;
@@ -104,6 +115,15 @@ int main(int argc, char *argv[])
     /* Cleanup and summary */
     cleanup_test_files();
     print_test_summary();
+
+#ifdef ASIO_SHARED_LIB
+    /* Close the asyncio.library for shared library version */
+    if (AsyncIOBase != NULL) {
+        CloseLibrary(AsyncIOBase);
+        AsyncIOBase = NULL;
+        printf("Closed asyncio.library\n");
+    }
+#endif
 
     return (test_failed == 0) ? 0 : 1;
 }
