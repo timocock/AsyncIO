@@ -22,11 +22,30 @@ LFLAGS = addsym smallcode smalldata noicons batch
 ###############################################################################
 
 OBJS = \
-	$(addsuffix .o, $(basename $(notdir $(wildcard src/*.c))))
+	Lib.o \
+	OpenAsync.o \
+	OpenAsyncFromFH.o \
+	OpenAsyncFH.o \
+	CloseAsync.o \
+	SeekAsync.o \
+	ReadAsync.o \
+	WriteAsync.o \
+	ReadCharAsync.o \
+	WriteCharAsync.o \
+	ReadLineAsync.o \
+	WriteLineAsync.o \
+	FGetsLenAsync.o \
+	PeekAsync.o \
+	WaitPacket.o \
+	SendPacket.o \
+	RequeuePacket.o \
+	RecordAsyncFailure.o \
+	AsyncLib.o \
+	AsyncLibVer.o
 
 ###############################################################################
 
-LIBS = sc:lib/sc.lib lib:small.lib lib:amiga.lib
+LIBS = lib:sc.lib lib:amiga.lib lib:debug.lib
 
 ###############################################################################
 
@@ -50,6 +69,25 @@ version:
 
 ###############################################################################
 
-# Object dependencies (add as needed)
-src/%.o : src/%.c
-	$(CC) $(CFLAGS) -o $@ $<
+###############################################################################
+
+Lib.o : Lib.c async.h Rev.h
+OpenAsync.o : OpenAsync.c async.h
+OpenAsyncFromFH.o : OpenAsyncFromFH.c async.h
+OpenAsyncFH.o : OpenAsyncFH.c async.h
+CloseAsync.o : CloseAsync.c async.h
+SeekAsync.o : SeekAsync.c async.h
+ReadAsync.o : ReadAsync.c async.h
+WriteAsync.o : WriteAsync.c async.h
+ReadCharAsync.o : ReadCharAsync.c async.h
+WriteCharAsync.o : WriteCharAsync.c async.h
+ReadLineAsync.o : ReadLineAsync.c async.h
+WriteLineAsync.o : WriteLineAsync.c async.h
+FGetsLenAsync.o : FGetsLenAsync.c async.h
+PeekAsync.o : PeekAsync.c async.h
+WaitPacket.o : WaitPacket.c async.h
+SendPacket.o : SendPacket.c async.h
+RequeuePacket.o : RequeuePacket.c async.h
+RecordAsyncFailure.o : RecordAsyncFailure.c async.h
+AsyncLib.o : AsyncLib.c async.h
+AsyncLibVer.o : AsyncLibVer.c
