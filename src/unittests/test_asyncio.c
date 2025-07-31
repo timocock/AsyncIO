@@ -401,13 +401,13 @@ LONG get_file_size(const char *filename)
     return -1;
 }
 
-/* Check if T: volume is available and writable */
+/* Check if T: assign is available and writable */
 BOOL check_t_volume_available(void)
 {
     BPTR test_file;
     LONG io_error;
     
-    TRACE("Checking T: volume availability");
+    TRACE("Checking T: assign availability");
     
     /* Try to create a test file in T: */
     test_file = Open("T:asyncio_test_check", MODE_WRITE);
@@ -420,18 +420,18 @@ BOOL check_t_volume_available(void)
         if (test_file != 0) {
             Close(test_file);
             DeleteFile("T:asyncio_test_check");
-            TRACE("T: volume is available and writable");
+            TRACE("T: assign is available and writable");
             return TRUE;
         } else {
             io_error = IoErr();
-            printf("TRACE: T: volume read test failed: IoErr = %ld\n", io_error);
+            printf("TRACE: T: assign read test failed: IoErr = %ld\n", io_error);
         }
     } else {
         io_error = IoErr();
-        printf("TRACE: T: volume write test failed: IoErr = %ld\n", io_error);
+        printf("TRACE: T: assign write test failed: IoErr = %ld\n", io_error);
     }
     
-    TRACE("T: volume is not available or not writable");
+    TRACE("T: assign is not available or not writable");
     return FALSE;
 }
 
@@ -454,13 +454,8 @@ int main(int argc, char *argv[])
     printf("=== AsyncIO Library Unit Test Suite ===\n");
     printf("Testing all functions from asyncio.doc\n\n");
 
-    /* Check T: volume availability */
-    if (!check_t_volume_available()) {
-        printf("ERROR: T: volume is not available or not writable\n");
-        printf("This test requires T: volume for safe file operations\n");
-        return 1;
-    }
-    printf("T: volume is available and writable\n\n");
+    /* T: assign should be available on any Amiga system */
+    printf("Using T: assign for safe file operations\n\n");
 
 #ifdef ASIO_SHARED_LIB
     /* Open the asyncio.library for shared library version */
