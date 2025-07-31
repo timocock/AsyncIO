@@ -219,13 +219,32 @@ BOOL verify_file_content(const char *filename, const char *expected_data, LONG e
     char buffer[1024];  /* Larger buffer for comprehensive testing */
     LONG bytes_read;
     BOOL result = FALSE;
+    LONG io_error;
     
     TRACE2("Verifying file content: %s (expected %ld bytes)", filename, expected_length);
+    
+    /* Check if file exists first */
+    {
+        BPTR test_file = Open(filename, MODE_READ);
+        if (test_file == 0) {
+            io_error = IoErr();
+            TRACE2("File does not exist: %s (IoErr: %ld)", filename, io_error);
+            return FALSE;
+        }
+        Close(test_file);
+        TRACE1("File exists: %s", filename);
+    }
     
     file = Open(filename, MODE_READ);
     if (file != 0) {
         bytes_read = Read(file, buffer, sizeof(buffer) - 1);
+        io_error = IoErr();
         Close(file);
+        
+        if (io_error != 0) {
+            TRACE2("Read error: IoErr = %ld", io_error);
+            return FALSE;
+        }
         
         if (bytes_read == expected_length) {
             buffer[bytes_read] = '\0';
@@ -239,7 +258,8 @@ BOOL verify_file_content(const char *filename, const char *expected_data, LONG e
             TRACE2("File length mismatch: expected %ld, got %ld", expected_length, bytes_read);
         }
     } else {
-        TRACE1("Failed to open file for verification: %s", filename);
+        io_error = IoErr();
+        TRACE2("Failed to open file for verification: %s (IoErr: %ld)", filename, io_error);
     }
     
     return result;
@@ -1061,12 +1081,38 @@ BOOL test_line_operations(void)
     
     if (file) {
         for (i = 0; test_strings[i] != NULL; i++) {
+            TRACE2("Writing line %d: '%s'", i + 1, test_strings[i]);
             result = WriteLineAsync(file, (STRPTR)test_strings[i]);
+            TRACE2("WriteLineAsync result: %ld (expected %ld)", result, strlen(test_strings[i]));
             TEST_ASSERT(result == strlen(test_strings[i]), "WriteLineAsync should write all bytes of string");
         }
         
         result = CloseAsync(file);
         TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        
+        /* Wait for async operations to complete */
+        wait_for_async_operation();
+        
+        /* Verify the written content using dos.library */
+        {
+            BPTR verify_file = Open(TEST_FILE_NAME, MODE_READ);
+            if (verify_file != 0) {
+                char verify_buffer[1024];
+                LONG verify_read = Read(verify_file, verify_buffer, sizeof(verify_buffer) - 1);
+                Close(verify_file);
+                
+                if (verify_read > 0) {
+                    verify_buffer[verify_read] = '\0';
+                    TRACE2("File verification: read %ld bytes", verify_read);
+                    TRACE1("File content: '%s'", verify_buffer);
+                } else {
+                    TRACE("File verification: no data read");
+                }
+            } else {
+                TRACE1("File verification: could not open %s", TEST_FILE_NAME);
+            }
+        }
+        
         TEST_PASS();
     } else {
         TEST_FAIL("OpenAsync failed");
