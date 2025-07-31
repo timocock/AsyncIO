@@ -1145,7 +1145,7 @@ void cleanup_test_files(void)
         printf("Deleted T:asyncio_sophisticated.dat\n");
         TRACE("Successfully deleted T:asyncio_sophisticated.dat");
     } else {
-        TRACE2("Failed to delete T:asyncio_sophisticated.dat, IoErr: %ld", IoErr());
+        TRACE2("Failed to delete %s, IoErr: %ld", "T:asyncio_sophisticated.dat", IoErr());
     }
     
     TRACE("File cleanup completed");
