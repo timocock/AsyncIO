@@ -175,15 +175,61 @@ int main(int argc, char *argv[])
     test_failed = 0;
 
     /* Run all test suites */
-    if (test_open_close()) printf("Open/Close tests completed\n");
-    if (test_write_operations()) printf("Write operation tests completed\n");
-    if (test_read_operations()) printf("Read operation tests completed\n");
-    if (test_seek_operations()) printf("Seek operation tests completed\n");
-    if (test_peek_operations()) printf("Peek operation tests completed\n");
-    if (test_line_operations()) printf("Line operation tests completed\n");
-    if (test_char_operations()) printf("Character operation tests completed\n");
-    if (test_error_handling()) printf("Error handling tests completed\n");
-    if (test_file_handle_operations()) printf("File handle operation tests completed\n");
+    TRACE("Starting test suite execution");
+    
+    if (test_open_close()) {
+        printf("Open/Close tests completed\n");
+    } else {
+        TRACE("Open/Close tests failed");
+    }
+    
+    if (test_write_operations()) {
+        printf("Write operation tests completed\n");
+    } else {
+        TRACE("Write operation tests failed");
+    }
+    
+    if (test_read_operations()) {
+        printf("Read operation tests completed\n");
+    } else {
+        TRACE("Read operation tests failed");
+    }
+    
+    if (test_seek_operations()) {
+        printf("Seek operation tests completed\n");
+    } else {
+        TRACE("Seek operation tests failed");
+    }
+    
+    if (test_peek_operations()) {
+        printf("Peek operation tests completed\n");
+    } else {
+        TRACE("Peek operation tests failed");
+    }
+    
+    if (test_line_operations()) {
+        printf("Line operation tests completed\n");
+    } else {
+        TRACE("Line operation tests failed");
+    }
+    
+    if (test_char_operations()) {
+        printf("Character operation tests completed\n");
+    } else {
+        TRACE("Character operation tests failed");
+    }
+    
+    if (test_error_handling()) {
+        printf("Error handling tests completed\n");
+    } else {
+        TRACE("Error handling tests failed");
+    }
+    
+    if (test_file_handle_operations()) {
+        printf("File handle operation tests completed\n");
+    } else {
+        TRACE("File handle operation tests failed");
+    }
 
     /* Cleanup and summary */
     TRACE("Starting cleanup phase");
@@ -205,7 +251,15 @@ int main(int argc, char *argv[])
 #endif
 
     TRACE1("Test suite completed, returning exit code %d", (test_failed == 0) ? 0 : 1);
-    return (test_failed == 0) ? 0 : 1;
+    
+    /* Ensure we always return a proper exit code */
+    if (test_failed == 0) {
+        TRACE("All tests passed successfully");
+        return 0;
+    } else {
+        TRACE1("Some tests failed (%ld failures)", test_failed);
+        return 1;
+    }
 }
 
 /* Test OpenAsync and CloseAsync functions */
@@ -605,20 +659,30 @@ BOOL test_char_operations(void)
     LONG byte_read;
 
     TEST_START("WriteCharAsync - Write individual characters");
+    TRACE1("Opening file for character writing: %s", TEST_FILE_NAME2);
     file = OpenAsync(TEST_FILE_NAME2, MODE_WRITE, TEST_BUFFER_SIZE);
+    TRACE_OPEN(file, TEST_FILE_NAME2, MODE_WRITE, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
     if (file) {
+        TRACE("Writing character 'X'");
         result = WriteCharAsync(file, 'X');
+        TRACE_CHAR_WRITE(file, 'X', result);
         TEST_ASSERT(result == 1, "WriteCharAsync should write one byte");
         
+        TRACE("Writing character 'Y'");
         result = WriteCharAsync(file, 'Y');
+        TRACE_CHAR_WRITE(file, 'Y', result);
         TEST_ASSERT(result == 1, "WriteCharAsync should write one byte");
         
+        TRACE("Writing character 'Z'");
         result = WriteCharAsync(file, 'Z');
+        TRACE_CHAR_WRITE(file, 'Z', result);
         TEST_ASSERT(result == 1, "WriteCharAsync should write one byte");
         
+        TRACE1("Closing file handle %p", file);
         result = CloseAsync(file);
+        TRACE_CLOSE(file, result);
         TEST_ASSERT(result >= 0, "CloseAsync should succeed");
         TEST_PASS();
     } else {
@@ -627,23 +691,35 @@ BOOL test_char_operations(void)
     }
 
     TEST_START("ReadCharAsync - Read individual characters");
+    TRACE1("Opening file for character reading: %s", TEST_FILE_NAME2);
     file = OpenAsync(TEST_FILE_NAME2, MODE_READ, TEST_BUFFER_SIZE);
+    TRACE_OPEN(file, TEST_FILE_NAME2, MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
     if (file) {
+        TRACE("Reading first character");
         byte_read = ReadCharAsync(file);
+        TRACE_CHAR_READ(file, byte_read);
         TEST_ASSERT(byte_read == 'X', "ReadCharAsync should read 'X'");
         
+        TRACE("Reading second character");
         byte_read = ReadCharAsync(file);
+        TRACE_CHAR_READ(file, byte_read);
         TEST_ASSERT(byte_read == 'Y', "ReadCharAsync should read 'Y'");
         
+        TRACE("Reading third character");
         byte_read = ReadCharAsync(file);
+        TRACE_CHAR_READ(file, byte_read);
         TEST_ASSERT(byte_read == 'Z', "ReadCharAsync should read 'Z'");
         
+        TRACE("Reading at EOF");
         byte_read = ReadCharAsync(file);
+        TRACE_CHAR_READ(file, byte_read);
         TEST_ASSERT(byte_read == -1, "ReadCharAsync should return -1 at EOF");
         
+        TRACE1("Closing file handle %p", file);
         result = CloseAsync(file);
+        TRACE_CLOSE(file, result);
         TEST_ASSERT(result >= 0, "CloseAsync should succeed");
         TEST_PASS();
     } else {
