@@ -1,0 +1,31 @@
+LARGE TEST FILE - Testing AsyncIO buffer boundaries and large file handling
+
+This file is designed to test AsyncIO's double-buffered asynchronous I/O system
+with files that are larger than the buffer size. The AsyncIO library uses two
+buffers, each roughly bufferSize/2 bytes, so this file should be significantly
+larger than the test buffer size to properly test the asynchronous operations.
+
+The file contains:
+- Multiple lines of varying lengths
+- Content that spans buffer boundaries
+- Data that requires multiple async operations
+- Mixed text patterns to verify data integrity
+
+Line 1: Short line
+Line 2: Medium length line with some content
+Line 3: Longer line with more detailed content to test buffer handling
+Line 4: Very long line that should definitely span across buffer boundaries and require the AsyncIO library to properly manage the double-buffered system with background operations
+Line 5: Another medium line
+Line 6: Short again
+Line 7: Extremely long line that contains a lot of repetitive text to fill up buffers and test the asynchronous nature of the I/O operations, ensuring that the library properly handles background operations while the application continues processing
+Line 8: Back to short
+Line 9: Medium length content
+Line 10: Final line with end marker
+
+This file should be large enough to test:
+- Buffer boundary crossing
+- Multiple async operations
+- Background I/O completion
+- Data integrity across buffers
+- Seek operations in large files
+- Read/write operations spanning multiple buffers 

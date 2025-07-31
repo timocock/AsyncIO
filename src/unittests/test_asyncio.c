@@ -153,12 +153,16 @@ BOOL test_line_operations(void);
 BOOL test_char_operations(void);
 BOOL test_error_handling(void);
 BOOL test_file_handle_operations(void);
+BOOL test_sophisticated_files(void);
 void cleanup_test_files(void);
 void print_test_summary(void);
 
 /* AsyncIO helper functions */
 void wait_for_async_operation(void);
 BOOL verify_file_content(const char *filename, const char *expected_data, LONG expected_length);
+BOOL verify_file_lines(const char *filename, const char **expected_lines, LONG num_lines);
+BOOL create_test_file(const char *filename, const char *content, LONG length);
+LONG get_file_size(const char *filename);
 
 /* AsyncIO helper functions */
 
@@ -175,7 +179,7 @@ void wait_for_async_operation(void)
 BOOL verify_file_content(const char *filename, const char *expected_data, LONG expected_length)
 {
     BPTR file;
-    char buffer[256];
+    char buffer[1024];  /* Larger buffer for comprehensive testing */
     LONG bytes_read;
     BOOL result = FALSE;
     
@@ -202,6 +206,95 @@ BOOL verify_file_content(const char *filename, const char *expected_data, LONG e
     }
     
     return result;
+}
+
+/* Verify file content line by line using dos.library */
+BOOL verify_file_lines(const char *filename, const char **expected_lines, LONG num_lines)
+{
+    BPTR file;
+    char buffer[256];
+    LONG line_count = 0;
+    BOOL result = TRUE;
+    
+    TRACE2("Verifying file lines: %s (%ld lines expected)", filename, num_lines);
+    
+    file = Open(filename, MODE_READ);
+    if (file != 0) {
+        while (line_count < num_lines && expected_lines[line_count] != NULL) {
+            LONG bytes_read = FGets(file, buffer, sizeof(buffer));
+            if (bytes_read > 0) {
+                /* Remove newline if present */
+                if (buffer[bytes_read - 1] == '\n') {
+                    buffer[bytes_read - 1] = '\0';
+                }
+                
+                if (strcmp(buffer, expected_lines[line_count]) != 0) {
+                    TRACE3("Line %ld mismatch: expected '%s', got '%s'", 
+                           line_count + 1, expected_lines[line_count], buffer);
+                    result = FALSE;
+                } else {
+                    TRACE2("Line %ld verified: '%s'", line_count + 1, buffer);
+                }
+            } else {
+                TRACE2("Failed to read line %ld", line_count + 1);
+                result = FALSE;
+            }
+            line_count++;
+        }
+        Close(file);
+        
+        if (line_count != num_lines) {
+            TRACE2("Line count mismatch: expected %ld, got %ld", num_lines, line_count);
+            result = FALSE;
+        }
+    } else {
+        TRACE1("Failed to open file for line verification: %s", filename);
+        result = FALSE;
+    }
+    
+    return result;
+}
+
+/* Create test file using dos.library */
+BOOL create_test_file(const char *filename, const char *content, LONG length)
+{
+    BPTR file;
+    LONG bytes_written;
+    BOOL result = FALSE;
+    
+    TRACE2("Creating test file: %s (%ld bytes)", filename, length);
+    
+    file = Open(filename, MODE_WRITE);
+    if (file != 0) {
+        bytes_written = Write(file, (APTR)content, length);
+        Close(file);
+        
+        if (bytes_written == length) {
+            TRACE("Test file created successfully");
+            result = TRUE;
+        } else {
+            TRACE2("Failed to write test file: expected %ld, wrote %ld", length, bytes_written);
+        }
+    } else {
+        TRACE1("Failed to create test file: %s", filename);
+    }
+    
+    return result;
+}
+
+/* Get file size using dos.library */
+LONG get_file_size(const char *filename)
+{
+    BPTR file;
+    LONG size = -1;
+    
+    file = Open(filename, MODE_READ);
+    if (file != 0) {
+        size = Seek(file, 0, MODE_END);
+        Close(file);
+    }
+    
+    return size;
 }
 
 /* Main test function */
@@ -281,6 +374,12 @@ int main(int argc, char *argv[])
         printf("File handle operation tests completed\n");
     } else {
         TRACE("File handle operation tests failed");
+    }
+    
+    if (test_sophisticated_files()) {
+        printf("Sophisticated file tests completed\n");
+    } else {
+        TRACE("Sophisticated file tests failed");
     }
 
     /* Cleanup and summary */
@@ -878,6 +977,132 @@ BOOL test_file_handle_operations(void)
     return TRUE;
 }
 
+/* Test sophisticated file operations using multiple test files */
+BOOL test_sophisticated_files(void)
+{
+    struct AsyncFile *file;
+    LONG result;
+    char buffer[1024];
+    const char *test_lines[] = {
+        "Line 1: Hello World - Basic ASCII text",
+        "Line 2: Test data with numbers 12345 and symbols !@#$%^&*()",
+        "Line 3: Short line",
+        "Line 4: Longer line with more content to test buffer boundaries and async operations",
+        "Line 5: Special characters: éèêëàáâäùúûüçñÿœæ",
+        "Line 6: Mixed content: ABC123!@# 456DEF789",
+        "Line 7: Empty line follows:",
+        "",
+        "Line 8: Line after empty line",
+        "Line 9: Very long line that might span multiple buffers or require multiple async operations to complete properly in the double-buffered system",
+        "Line 10: Final line with end-of-file marker",
+        NULL
+    };
+
+    TEST_START("Sophisticated file operations - Read from test_data.txt");
+    TRACE("Opening sophisticated test file: test_data.txt");
+    file = OpenAsync("test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
+    TRACE_OPEN(file, "test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed for test_data.txt");
+    
+    if (file) {
+        /* Read the entire file */
+        result = ReadAsync(file, buffer, sizeof(buffer) - 1);
+        TRACE_READ(file, buffer, sizeof(buffer) - 1, result);
+        TEST_ASSERT(result > 0, "ReadAsync should read data from test_data.txt");
+        
+        buffer[result] = '\0';
+        TRACE2("Read %ld bytes from test_data.txt", result);
+        
+        result = CloseAsync(file);
+        TRACE_CLOSE(file, result);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        
+        /* Verify the content using dos.library */
+        TEST_ASSERT(verify_file_lines("test_data.txt", test_lines, 11), 
+                   "File content should match expected lines");
+        
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync failed for test_data.txt");
+        return FALSE;
+    }
+
+    TEST_START("Sophisticated file operations - Write to new file");
+    TRACE("Creating new file with sophisticated content");
+    file = OpenAsync("T:asyncio_sophisticated.dat", MODE_WRITE, TEST_BUFFER_SIZE);
+    TRACE_OPEN(file, "T:asyncio_sophisticated.dat", MODE_WRITE, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed for writing");
+    
+    if (file) {
+        const char *sophisticated_content = 
+            "This is sophisticated test content for AsyncIO\n"
+            "Testing double-buffered asynchronous I/O operations\n"
+            "With multiple lines and various content types\n"
+            "Including special characters: éèêëàáâäùúûüçñÿœæ\n"
+            "And mixed content: ABC123!@# 456DEF789\n"
+            "End of sophisticated test content\n";
+        
+        LONG content_length = strlen(sophisticated_content);
+        
+        TRACE2("Writing sophisticated content (%ld bytes)", content_length);
+        result = WriteAsync(file, (APTR)sophisticated_content, content_length);
+        TRACE_WRITE(file, (APTR)sophisticated_content, content_length, result);
+        TEST_ASSERT(result == content_length, "WriteAsync should write all bytes");
+        
+        result = CloseAsync(file);
+        TRACE_CLOSE(file, result);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        
+        /* Wait for async operations to complete */
+        wait_for_async_operation();
+        
+        /* Verify using dos.library */
+        TEST_ASSERT(verify_file_content("T:asyncio_sophisticated.dat", sophisticated_content, content_length),
+                   "Sophisticated file content should match written data");
+        
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync failed for sophisticated writing");
+        return FALSE;
+    }
+
+    TEST_START("Sophisticated file operations - Large file handling");
+    TRACE("Testing large file operations");
+    file = OpenAsync("test_large.txt", MODE_READ, TEST_BUFFER_SIZE);
+    TRACE_OPEN(file, "test_large.txt", MODE_READ, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed for large file");
+    
+    if (file) {
+        LONG total_read = 0;
+        LONG bytes_read;
+        
+        /* Read the file in chunks to test buffer boundaries */
+        while ((bytes_read = ReadAsync(file, buffer, sizeof(buffer) - 1)) > 0) {
+            total_read += bytes_read;
+            TRACE2("Read chunk: %ld bytes (total: %ld)", bytes_read, total_read);
+        }
+        
+        TEST_ASSERT(total_read > 0, "Should read data from large file");
+        TRACE1("Total bytes read from large file: %ld", total_read);
+        
+        result = CloseAsync(file);
+        TRACE_CLOSE(file, result);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        
+        /* Verify file size using dos.library */
+        LONG file_size = get_file_size("test_large.txt");
+        TRACE1("Large file size via dos.library: %ld", file_size);
+        TEST_ASSERT(file_size > 0, "Large file should have content");
+        
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync failed for large file");
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 /* Cleanup test files */
 void cleanup_test_files(void)
 {
@@ -898,6 +1123,15 @@ void cleanup_test_files(void)
         TRACE1("Successfully deleted %s", TEST_FILE_NAME2);
     } else {
         TRACE2("Failed to delete %s, IoErr: %ld", TEST_FILE_NAME2, IoErr());
+    }
+    
+    /* Clean up sophisticated test files */
+    TRACE("Deleting sophisticated test file: T:asyncio_sophisticated.dat");
+    if (DeleteFile("T:asyncio_sophisticated.dat") == 0) {
+        printf("Deleted T:asyncio_sophisticated.dat\n");
+        TRACE("Successfully deleted T:asyncio_sophisticated.dat");
+    } else {
+        TRACE2("Failed to delete T:asyncio_sophisticated.dat, IoErr: %ld", IoErr());
     }
     
     TRACE("File cleanup completed");
