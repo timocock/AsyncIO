@@ -67,8 +67,20 @@ static LONG test_failed = 0;
 }
 
 /* Trace output macros for detailed debugging */
-#define TRACE(msg, ...) { \
-    printf("TRACE: " msg "\n", ##__VA_ARGS__); \
+#define TRACE(msg) { \
+    printf("TRACE: " msg "\n"); \
+}
+
+#define TRACE1(msg, arg1) { \
+    printf("TRACE: " msg "\n", arg1); \
+}
+
+#define TRACE2(msg, arg1, arg2) { \
+    printf("TRACE: " msg "\n", arg1, arg2); \
+}
+
+#define TRACE3(msg, arg1, arg2, arg3) { \
+    printf("TRACE: " msg "\n", arg1, arg2, arg3); \
 }
 
 #define TRACE_READ(file, buffer, bytes, result) { \
@@ -182,7 +194,7 @@ int main(int argc, char *argv[])
     /* Close the asyncio.library for shared library version */
     TRACE("Closing asyncio.library");
     if (AsyncIOBase != NULL) {
-        TRACE("AsyncIOBase = %p, calling CloseLibrary", AsyncIOBase);
+        TRACE1("AsyncIOBase = %p, calling CloseLibrary", AsyncIOBase);
         CloseLibrary(AsyncIOBase);
         AsyncIOBase = NULL;
         printf("Closed asyncio.library\n");
@@ -192,7 +204,7 @@ int main(int argc, char *argv[])
     }
 #endif
 
-    TRACE("Test suite completed, returning exit code %d", (test_failed == 0) ? 0 : 1);
+    TRACE1("Test suite completed, returning exit code %d", (test_failed == 0) ? 0 : 1);
     return (test_failed == 0) ? 0 : 1;
 }
 
@@ -203,12 +215,12 @@ BOOL test_open_close(void)
     LONG result;
 
     TEST_START("OpenAsync - Create new file for writing");
-    TRACE("Creating new file for writing: %s", TEST_FILE_NAME);
+    TRACE1("Creating new file for writing: %s", TEST_FILE_NAME);
     file = OpenAsync(TEST_FILE_NAME, MODE_WRITE, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, TEST_FILE_NAME, MODE_WRITE, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should return valid file handle");
     if (file) {
-        TRACE("Closing file handle %p", file);
+        TRACE1("Closing file handle %p", file);
         result = CloseAsync(file);
         TRACE_CLOSE(file, result);
         TEST_ASSERT(result >= 0, "CloseAsync should succeed");
@@ -219,12 +231,12 @@ BOOL test_open_close(void)
     }
 
     TEST_START("OpenAsync - Open existing file for reading");
-    TRACE("Opening existing file for reading: %s", TEST_FILE_NAME);
+    TRACE1("Opening existing file for reading: %s", TEST_FILE_NAME);
     file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should return valid file handle for reading");
     if (file) {
-        TRACE("Closing file handle %p", file);
+        TRACE1("Closing file handle %p", file);
         result = CloseAsync(file);
         TRACE_CLOSE(file, result);
         TEST_ASSERT(result >= 0, "CloseAsync should succeed");
@@ -235,12 +247,12 @@ BOOL test_open_close(void)
     }
 
     TEST_START("OpenAsync - Append mode");
-    TRACE("Opening file for append mode: %s", TEST_FILE_NAME);
+    TRACE1("Opening file for append mode: %s", TEST_FILE_NAME);
     file = OpenAsync(TEST_FILE_NAME, MODE_APPEND, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, TEST_FILE_NAME, MODE_APPEND, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should return valid file handle for appending");
     if (file) {
-        TRACE("Closing file handle %p", file);
+        TRACE1("Closing file handle %p", file);
         result = CloseAsync(file);
         TRACE_CLOSE(file, result);
         TEST_ASSERT(result >= 0, "CloseAsync should succeed");
@@ -269,18 +281,18 @@ BOOL test_write_operations(void)
     LONG data_len = strlen(test_data);
 
     TEST_START("WriteAsync - Write data to file");
-    TRACE("Opening file for writing: %s", TEST_FILE_NAME);
+    TRACE1("Opening file for writing: %s", TEST_FILE_NAME);
     file = OpenAsync(TEST_FILE_NAME, MODE_WRITE, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, TEST_FILE_NAME, MODE_WRITE, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
     if (file) {
-        TRACE("Writing data: '%s' (%ld bytes)", test_data, data_len);
+        TRACE2("Writing data: '%s' (%ld bytes)", test_data, data_len);
         result = WriteAsync(file, (APTR)test_data, data_len);
         TRACE_WRITE(file, (APTR)test_data, data_len, result);
         TEST_ASSERT(result == data_len, "WriteAsync should write all bytes");
         
-        TRACE("Closing file handle %p", file);
+        TRACE1("Closing file handle %p", file);
         result = CloseAsync(file);
         TRACE_CLOSE(file, result);
         TEST_ASSERT(result >= 0, "CloseAsync should succeed");
@@ -291,7 +303,7 @@ BOOL test_write_operations(void)
     }
 
     TEST_START("WriteCharAsync - Write single characters");
-    TRACE("Opening file for character writing: %s", TEST_FILE_NAME2);
+    TRACE1("Opening file for character writing: %s", TEST_FILE_NAME2);
     file = OpenAsync(TEST_FILE_NAME2, MODE_WRITE, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, TEST_FILE_NAME2, MODE_WRITE, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
@@ -312,7 +324,7 @@ BOOL test_write_operations(void)
         TRACE_CHAR_WRITE(file, 'C', result);
         TEST_ASSERT(result == 1, "WriteCharAsync should write one byte");
         
-        TRACE("Closing file handle %p", file);
+        TRACE1("Closing file handle %p", file);
         result = CloseAsync(file);
         TRACE_CLOSE(file, result);
         TEST_ASSERT(result >= 0, "CloseAsync should succeed");
@@ -334,21 +346,21 @@ BOOL test_read_operations(void)
     LONG byte_read;
 
     TEST_START("ReadAsync - Read data from file");
-    TRACE("Opening file for reading: %s", TEST_FILE_NAME);
+    TRACE1("Opening file for reading: %s", TEST_FILE_NAME);
     file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
     if (file) {
-        TRACE("Reading up to %ld bytes into buffer", sizeof(buffer) - 1);
+        TRACE1("Reading up to %ld bytes into buffer", sizeof(buffer) - 1);
         result = ReadAsync(file, buffer, sizeof(buffer) - 1);
         TRACE_READ(file, buffer, sizeof(buffer) - 1, result);
         TEST_ASSERT(result > 0, "ReadAsync should read some data");
         
         buffer[result] = '\0';
-        TRACE("Successfully read %ld bytes: '%s'", result, buffer);
+        TRACE2("Successfully read %ld bytes: '%s'", result, buffer);
         
-        TRACE("Closing file handle %p", file);
+        TRACE1("Closing file handle %p", file);
         result = CloseAsync(file);
         TRACE_CLOSE(file, result);
         TEST_ASSERT(result >= 0, "CloseAsync should succeed");
@@ -359,7 +371,7 @@ BOOL test_read_operations(void)
     }
 
     TEST_START("ReadCharAsync - Read single characters");
-    TRACE("Opening file for character reading: %s", TEST_FILE_NAME2);
+    TRACE1("Opening file for character reading: %s", TEST_FILE_NAME2);
     file = OpenAsync(TEST_FILE_NAME2, MODE_READ, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, TEST_FILE_NAME2, MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
@@ -385,7 +397,7 @@ BOOL test_read_operations(void)
         TRACE_CHAR_READ(file, byte_read);
         TEST_ASSERT(byte_read == -1, "ReadCharAsync should return -1 at EOF");
         
-        TRACE("Closing file handle %p", file);
+        TRACE1("Closing file handle %p", file);
         result = CloseAsync(file);
         TRACE_CLOSE(file, result);
         TEST_ASSERT(result >= 0, "CloseAsync should succeed");
@@ -736,20 +748,20 @@ void cleanup_test_files(void)
     TRACE("Starting file cleanup");
     printf("\nCleaning up test files...\n");
     
-    TRACE("Deleting test file: %s", TEST_FILE_NAME);
+    TRACE1("Deleting test file: %s", TEST_FILE_NAME);
     if (DeleteFile(TEST_FILE_NAME) == 0) {
         printf("Deleted %s\n", TEST_FILE_NAME);
-        TRACE("Successfully deleted %s", TEST_FILE_NAME);
+        TRACE1("Successfully deleted %s", TEST_FILE_NAME);
     } else {
-        TRACE("Failed to delete %s, IoErr: %ld", TEST_FILE_NAME, IoErr());
+        TRACE2("Failed to delete %s, IoErr: %ld", TEST_FILE_NAME, IoErr());
     }
     
-    TRACE("Deleting test file: %s", TEST_FILE_NAME2);
+    TRACE1("Deleting test file: %s", TEST_FILE_NAME2);
     if (DeleteFile(TEST_FILE_NAME2) == 0) {
         printf("Deleted %s\n", TEST_FILE_NAME2);
-        TRACE("Successfully deleted %s", TEST_FILE_NAME2);
+        TRACE1("Successfully deleted %s", TEST_FILE_NAME2);
     } else {
-        TRACE("Failed to delete %s, IoErr: %ld", TEST_FILE_NAME2, IoErr());
+        TRACE2("Failed to delete %s, IoErr: %ld", TEST_FILE_NAME2, IoErr());
     }
     
     TRACE("File cleanup completed");
