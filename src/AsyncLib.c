@@ -5,7 +5,7 @@
 void __regargs __autoopenfail( char * );
 
 
-struct Library	*AsyncIOBase;
+extern struct Library	*AsyncIOBase;
 static void *libbase;
 
 extern long __oslibversion;

@@ -1,0 +1,35 @@
+; Unit test runner for asyncio.library
+; Amiga shell script
+
+echo "=== AsyncIO Library Unit Test Runner ==="
+echo ""
+
+; Check if test executable exists
+if exists test_asyncio
+    echo "Found test_asyncio executable"
+else
+    echo "ERROR: test_asyncio executable not found!"
+    echo "Please run 'smake' first to build the tests."
+    quit 1
+endif
+
+; Run the tests
+echo "Running unit tests..."
+echo ""
+
+test_asyncio
+
+; Capture exit code
+set exit_code $RC
+
+echo ""
+echo "=== Test Run Complete ==="
+echo "Exit code: $exit_code"
+
+if $exit_code eq 0
+    echo "All tests passed successfully!"
+else
+    echo "Some tests failed!"
+endif
+
+quit $exit_code 

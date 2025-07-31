@@ -1,0 +1,625 @@
+/*
+ * test_asyncio.c
+ *
+ * Comprehensive unit test for asyncio.library
+ * Tests all functions described in asyncio.doc
+ *
+ * This test creates temporary files, performs various operations,
+ * and verifies the results match expected behavior.
+ */
+
+#include <proto/exec.h>
+#include <proto/dos.h>
+#include <proto/asyncio.h>
+#include <stdio.h>
+#include <string.h>
+
+struct Library *AsyncIOBase;
+
+/* Test configuration */
+#define TEST_BUFFER_SIZE 8192
+#define TEST_FILE_NAME "T:asyncio_test.dat"
+#define TEST_FILE_NAME2 "T:asyncio_test2.dat"
+#define MAX_LINE_LENGTH 256
+
+/* Test data - Latin-1 only, short lines */
+static const char *test_strings[] = {
+    "Line 1: Hello World\n",
+    "Line 2: Test data\n",
+    "Line 3: Short line\n",
+    "Line 4: Numbers 12345\n",
+    "Line 5: Special chars !@#\n",
+    "Line 6: End of file\n",
+    NULL
+};
+
+/* Simple test data for binary operations */
+static const char *test_binary_data = "Binary test data";
+
+/* Global variables for test tracking */
+static LONG test_count = 0;
+static LONG test_passed = 0;
+static LONG test_failed = 0;
+
+/* Test result tracking macros */
+#define TEST_START(name) { \
+    printf("TEST %ld: %s\n", ++test_count, name); \
+}
+
+#define TEST_PASS() { \
+    printf("  PASS\n"); \
+    test_passed++; \
+}
+
+#define TEST_FAIL(reason) { \
+    printf("  FAIL: %s\n", reason); \
+    test_failed++; \
+}
+
+#define TEST_ASSERT(condition, message) { \
+    if (condition) { \
+        printf("    ASSERT: %s - OK\n", message); \
+    } else { \
+        printf("    ASSERT: %s - FAILED\n", message); \
+        TEST_FAIL(message); \
+        return FALSE; \
+    } \
+}
+
+/* Function prototypes */
+BOOL test_open_close(void);
+BOOL test_write_operations(void);
+BOOL test_read_operations(void);
+BOOL test_seek_operations(void);
+BOOL test_peek_operations(void);
+BOOL test_line_operations(void);
+BOOL test_char_operations(void);
+BOOL test_error_handling(void);
+BOOL test_file_handle_operations(void);
+void cleanup_test_files(void);
+void print_test_summary(void);
+
+/* Main test function */
+int main(int argc, char *argv[])
+{
+    printf("=== AsyncIO Library Unit Test Suite ===\n");
+    printf("Testing all functions from asyncio.doc\n\n");
+
+    /* Initialize test counters */
+    test_count = 0;
+    test_passed = 0;
+    test_failed = 0;
+
+    /* Run all test suites */
+    if (test_open_close()) printf("Open/Close tests completed\n");
+    if (test_write_operations()) printf("Write operation tests completed\n");
+    if (test_read_operations()) printf("Read operation tests completed\n");
+    if (test_seek_operations()) printf("Seek operation tests completed\n");
+    if (test_peek_operations()) printf("Peek operation tests completed\n");
+    if (test_line_operations()) printf("Line operation tests completed\n");
+    if (test_char_operations()) printf("Character operation tests completed\n");
+    if (test_error_handling()) printf("Error handling tests completed\n");
+    if (test_file_handle_operations()) printf("File handle operation tests completed\n");
+
+    /* Cleanup and summary */
+    cleanup_test_files();
+    print_test_summary();
+
+    return (test_failed == 0) ? 0 : 1;
+}
+
+/* Test OpenAsync and CloseAsync functions */
+BOOL test_open_close(void)
+{
+    struct AsyncFile *file;
+    LONG result;
+
+    TEST_START("OpenAsync - Create new file for writing");
+    file = OpenAsync(TEST_FILE_NAME, MODE_WRITE, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should return valid file handle");
+    if (file) {
+        result = CloseAsync(file);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync returned NULL");
+        return FALSE;
+    }
+
+    TEST_START("OpenAsync - Open existing file for reading");
+    file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should return valid file handle for reading");
+    if (file) {
+        result = CloseAsync(file);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync returned NULL for reading");
+        return FALSE;
+    }
+
+    TEST_START("OpenAsync - Append mode");
+    file = OpenAsync(TEST_FILE_NAME, MODE_APPEND, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should return valid file handle for appending");
+    if (file) {
+        result = CloseAsync(file);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync returned NULL for appending");
+        return FALSE;
+    }
+
+    TEST_START("CloseAsync - NULL file handle");
+    result = CloseAsync(NULL);
+    TEST_ASSERT(result < 0, "CloseAsync should fail with NULL file handle");
+    TEST_PASS();
+
+    return TRUE;
+}
+
+/* Test WriteAsync and WriteCharAsync functions */
+BOOL test_write_operations(void)
+{
+    struct AsyncFile *file;
+    LONG result;
+    const char *test_data = "Test write data\n";
+    LONG data_len = strlen(test_data);
+
+    TEST_START("WriteAsync - Write data to file");
+    file = OpenAsync(TEST_FILE_NAME, MODE_WRITE, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed");
+    
+    if (file) {
+        result = WriteAsync(file, (APTR)test_data, data_len);
+        TEST_ASSERT(result == data_len, "WriteAsync should write all bytes");
+        
+        result = CloseAsync(file);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync failed");
+        return FALSE;
+    }
+
+    TEST_START("WriteCharAsync - Write single characters");
+    file = OpenAsync(TEST_FILE_NAME2, MODE_WRITE, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed");
+    
+    if (file) {
+        result = WriteCharAsync(file, 'A');
+        TEST_ASSERT(result == 1, "WriteCharAsync should write one byte");
+        
+        result = WriteCharAsync(file, 'B');
+        TEST_ASSERT(result == 1, "WriteCharAsync should write one byte");
+        
+        result = WriteCharAsync(file, 'C');
+        TEST_ASSERT(result == 1, "WriteCharAsync should write one byte");
+        
+        result = CloseAsync(file);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync failed");
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/* Test ReadAsync and ReadCharAsync functions */
+BOOL test_read_operations(void)
+{
+    struct AsyncFile *file;
+    LONG result;
+    char buffer[256];
+    LONG byte_read;
+
+    TEST_START("ReadAsync - Read data from file");
+    file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed");
+    
+    if (file) {
+        result = ReadAsync(file, buffer, sizeof(buffer) - 1);
+        TEST_ASSERT(result > 0, "ReadAsync should read some data");
+        
+        buffer[result] = '\0';
+        printf("    Read %ld bytes: '%s'", result, buffer);
+        
+        result = CloseAsync(file);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync failed");
+        return FALSE;
+    }
+
+    TEST_START("ReadCharAsync - Read single characters");
+    file = OpenAsync(TEST_FILE_NAME2, MODE_READ, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed");
+    
+    if (file) {
+        byte_read = ReadCharAsync(file);
+        TEST_ASSERT(byte_read == 'A', "ReadCharAsync should read 'A'");
+        
+        byte_read = ReadCharAsync(file);
+        TEST_ASSERT(byte_read == 'B', "ReadCharAsync should read 'B'");
+        
+        byte_read = ReadCharAsync(file);
+        TEST_ASSERT(byte_read == 'C', "ReadCharAsync should read 'C'");
+        
+        byte_read = ReadCharAsync(file);
+        TEST_ASSERT(byte_read == -1, "ReadCharAsync should return -1 at EOF");
+        
+        result = CloseAsync(file);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync failed");
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/* Test SeekAsync function */
+BOOL test_seek_operations(void)
+{
+    struct AsyncFile *file;
+    LONG result;
+    char buffer[10];
+
+    TEST_START("SeekAsync - Seek to beginning of file");
+    file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed");
+    
+    if (file) {
+        result = SeekAsync(file, 0, MODE_START);
+        TEST_ASSERT(result >= 0, "SeekAsync should succeed");
+        
+        result = ReadAsync(file, buffer, 5);
+        TEST_ASSERT(result == 5, "ReadAsync should read 5 bytes after seek");
+        
+        result = CloseAsync(file);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync failed");
+        return FALSE;
+    }
+
+    TEST_START("SeekAsync - Seek from current position");
+    file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed");
+    
+    if (file) {
+        result = SeekAsync(file, 5, MODE_CURRENT);
+        TEST_ASSERT(result >= 0, "SeekAsync should succeed");
+        
+        result = ReadAsync(file, buffer, 5);
+        TEST_ASSERT(result == 5, "ReadAsync should read 5 bytes after seek");
+        
+        result = CloseAsync(file);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync failed");
+        return FALSE;
+    }
+
+    TEST_START("SeekAsync - Get current position");
+    file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed");
+    
+    if (file) {
+        result = SeekAsync(file, 0, MODE_CURRENT);
+        TEST_ASSERT(result >= 0, "SeekAsync should return current position");
+        printf("    Current position: %ld", result);
+        
+        result = CloseAsync(file);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync failed");
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/* Test PeekAsync function */
+BOOL test_peek_operations(void)
+{
+    struct AsyncFile *file;
+    LONG result;
+    char buffer1[10], buffer2[10];
+
+    TEST_START("PeekAsync - Peek without advancing file pointer");
+    file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed");
+    
+    if (file) {
+        /* Peek first 5 bytes */
+        result = PeekAsync(file, buffer1, 5);
+        TEST_ASSERT(result == 5, "PeekAsync should read 5 bytes");
+        
+        /* Read the same 5 bytes */
+        result = ReadAsync(file, buffer2, 5);
+        TEST_ASSERT(result == 5, "ReadAsync should read 5 bytes");
+        
+        /* Compare the data */
+        TEST_ASSERT(memcmp(buffer1, buffer2, 5) == 0, "Peeked and read data should be identical");
+        
+        result = CloseAsync(file);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync failed");
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/* Test ReadLineAsync, WriteLineAsync, FGetsAsync, and FGetsLenAsync functions */
+BOOL test_line_operations(void)
+{
+    struct AsyncFile *file;
+    LONG result;
+    char buffer[MAX_LINE_LENGTH];
+    LONG length;
+    int i;
+
+    TEST_START("WriteLineAsync - Write lines to file");
+    file = OpenAsync(TEST_FILE_NAME, MODE_WRITE, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed");
+    
+    if (file) {
+        for (i = 0; test_strings[i] != NULL; i++) {
+            result = WriteLineAsync(file, (STRPTR)test_strings[i]);
+            TEST_ASSERT(result == strlen(test_strings[i]), "WriteLineAsync should write all bytes");
+        }
+        
+        result = CloseAsync(file);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync failed");
+        return FALSE;
+    }
+
+    TEST_START("ReadLineAsync - Read lines from file");
+    file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed");
+    
+    if (file) {
+        for (i = 0; test_strings[i] != NULL; i++) {
+            result = ReadLineAsync(file, buffer, sizeof(buffer));
+            TEST_ASSERT(result == strlen(test_strings[i]), "ReadLineAsync should read correct number of bytes");
+            TEST_ASSERT(strcmp(buffer, test_strings[i]) == 0, "ReadLineAsync should read correct data");
+        }
+        
+        result = CloseAsync(file);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync failed");
+        return FALSE;
+    }
+
+    TEST_START("FGetsAsync - Read lines with FGetsAsync");
+    file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed");
+    
+    if (file) {
+        for (i = 0; test_strings[i] != NULL; i++) {
+            APTR result_ptr = FGetsAsync(file, buffer, sizeof(buffer));
+            TEST_ASSERT(result_ptr == buffer, "FGetsAsync should return buffer pointer");
+            TEST_ASSERT(strcmp(buffer, test_strings[i]) == 0, "FGetsAsync should read correct data");
+        }
+        
+        result = CloseAsync(file);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync failed");
+        return FALSE;
+    }
+
+    TEST_START("FGetsLenAsync - Read lines with length tracking");
+    file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed");
+    
+    if (file) {
+        for (i = 0; test_strings[i] != NULL; i++) {
+            APTR result_ptr = FGetsLenAsync(file, buffer, sizeof(buffer), &length);
+            TEST_ASSERT(result_ptr == buffer, "FGetsLenAsync should return buffer pointer");
+            TEST_ASSERT(length == strlen(test_strings[i]), "FGetsLenAsync should return correct length");
+            TEST_ASSERT(strcmp(buffer, test_strings[i]) == 0, "FGetsLenAsync should read correct data");
+        }
+        
+        result = CloseAsync(file);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync failed");
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/* Test ReadCharAsync and WriteCharAsync functions */
+BOOL test_char_operations(void)
+{
+    struct AsyncFile *file;
+    LONG result;
+    LONG byte_read;
+
+    TEST_START("WriteCharAsync - Write individual characters");
+    file = OpenAsync(TEST_FILE_NAME2, MODE_WRITE, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed");
+    
+    if (file) {
+        result = WriteCharAsync(file, 'X');
+        TEST_ASSERT(result == 1, "WriteCharAsync should write one byte");
+        
+        result = WriteCharAsync(file, 'Y');
+        TEST_ASSERT(result == 1, "WriteCharAsync should write one byte");
+        
+        result = WriteCharAsync(file, 'Z');
+        TEST_ASSERT(result == 1, "WriteCharAsync should write one byte");
+        
+        result = CloseAsync(file);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync failed");
+        return FALSE;
+    }
+
+    TEST_START("ReadCharAsync - Read individual characters");
+    file = OpenAsync(TEST_FILE_NAME2, MODE_READ, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed");
+    
+    if (file) {
+        byte_read = ReadCharAsync(file);
+        TEST_ASSERT(byte_read == 'X', "ReadCharAsync should read 'X'");
+        
+        byte_read = ReadCharAsync(file);
+        TEST_ASSERT(byte_read == 'Y', "ReadCharAsync should read 'Y'");
+        
+        byte_read = ReadCharAsync(file);
+        TEST_ASSERT(byte_read == 'Z', "ReadCharAsync should read 'Z'");
+        
+        byte_read = ReadCharAsync(file);
+        TEST_ASSERT(byte_read == -1, "ReadCharAsync should return -1 at EOF");
+        
+        result = CloseAsync(file);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync failed");
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/* Test error handling scenarios */
+BOOL test_error_handling(void)
+{
+    struct AsyncFile *file;
+    LONG result;
+    char buffer[10];
+
+    TEST_START("Error handling - Open non-existent file for reading");
+    file = OpenAsync("NONEXISTENT_FILE", MODE_READ, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file == NULL, "OpenAsync should return NULL for non-existent file");
+    if (file == NULL) {
+        printf("    IoErr: %ld", IoErr());
+        TEST_PASS();
+    } else {
+        CloseAsync(file);
+        TEST_FAIL("OpenAsync should fail for non-existent file");
+        return FALSE;
+    }
+
+    TEST_START("Error handling - Read from write-only file");
+    file = OpenAsync(TEST_FILE_NAME, MODE_WRITE, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed");
+    
+    if (file) {
+        result = ReadAsync(file, buffer, 5);
+        TEST_ASSERT(result == -1, "ReadAsync should fail on write-only file");
+        
+        result = CloseAsync(file);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync failed");
+        return FALSE;
+    }
+
+    TEST_START("Error handling - Write to read-only file");
+    file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed");
+    
+    if (file) {
+        result = WriteAsync(file, "test", 4);
+        TEST_ASSERT(result == -1, "WriteAsync should fail on read-only file");
+        
+        result = CloseAsync(file);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        TEST_PASS();
+    } else {
+        TEST_FAIL("OpenAsync failed");
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/* Test OpenAsyncFromFH function */
+BOOL test_file_handle_operations(void)
+{
+    struct AsyncFile *async_file;
+    BPTR dos_file;
+    LONG result;
+    char buffer[10];
+
+    TEST_START("OpenAsyncFromFH - Open from DOS file handle");
+    dos_file = Open(TEST_FILE_NAME, MODE_READ);
+    TEST_ASSERT(dos_file != 0, "DOS Open should succeed");
+    
+    if (dos_file != 0) {
+        async_file = OpenAsyncFromFH(dos_file, MODE_READ, TEST_BUFFER_SIZE);
+        TEST_ASSERT(async_file != NULL, "OpenAsyncFromFH should return valid file handle");
+        
+        if (async_file) {
+            result = ReadAsync(async_file, buffer, 5);
+            TEST_ASSERT(result == 5, "ReadAsync should read 5 bytes");
+            
+            result = CloseAsync(async_file);
+            TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+        }
+        
+        Close(dos_file);
+        TEST_PASS();
+    } else {
+        TEST_FAIL("DOS Open failed");
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/* Cleanup test files */
+void cleanup_test_files(void)
+{
+    printf("\nCleaning up test files...\n");
+    
+    if (DeleteFile(TEST_FILE_NAME) == 0) {
+        printf("Deleted %s\n", TEST_FILE_NAME);
+    }
+    
+    if (DeleteFile(TEST_FILE_NAME2) == 0) {
+        printf("Deleted %s\n", TEST_FILE_NAME2);
+    }
+}
+
+/* Print test summary */
+void print_test_summary(void)
+{
+    printf("\n=== Test Summary ===\n");
+    printf("Total tests: %ld\n", test_count);
+    printf("Passed: %ld\n", test_passed);
+    printf("Failed: %ld\n", test_failed);
+    printf("Success rate: %.1f%%\n", (test_count > 0) ? (test_passed * 100.0 / test_count) : 0.0);
+    
+    if (test_failed == 0) {
+        printf("\nALL TESTS PASSED! \\o/\n");
+    } else {
+        printf("\nSOME TESTS FAILED! :(\n");
+    }
+} 

@@ -14,13 +14,23 @@ DEBUG = symbolflush noopt
 ###############################################################################
 
 CFLAGS = resopt idlen=64 comnest streq strmerge nostkchk \
-	includedir=include: $(OPTIMIZE) debug=$(DEBUG) \
-	params=register strsect=code mccons smallcode smalldata
+	includedir=include: includedir=/include $(OPTIMIZE) debug=$(DEBUG) \
+	params=register strsect=code mccons smallcode smalldata \
+	unsignedchars nomultipleincludes structureequivalence \
+	optimizescheduler noversion noicons memorysize=huge \
+	stringsconst nostartup
 AFLAGS = -d
-LFLAGS = addsym smallcode smalldata noicons batch
+LFLAGS = addsym smallcode smalldata noicons batch stripdebug
 
 ###############################################################################
 
+# Source files (same as DMakeFile)
+SRC = CloseAsync.c OpenAsync.c OpenAsyncFH.c OpenAsyncFromFH.c PeekAsync.c \
+      ReadAsync.c ReadCharAsync.c ReadLineAsync.c RecordAsyncFailure.c \
+      RequeuePacket.c SeekAsync.c SendPacket.c WaitPacket.c WriteAsync.c \
+      WriteCharAsync.c WriteLineAsync.c FGetsLenAsync.c
+
+# Object files for shared library (LVO)
 OBJS = \
 	Lib.o \
 	OpenAsync.o \
@@ -39,31 +49,76 @@ OBJS = \
 	WaitPacket.o \
 	SendPacket.o \
 	RequeuePacket.o \
-	RecordAsyncFailure.o \
+	RecordAsyncFailure.o
+
+# Object files for static library (normal)
+OBJS_STATIC = \
+	ol/CloseAsync.o \
+	ol/OpenAsync.o \
+	ol/OpenAsyncFH.o \
+	ol/OpenAsyncFromFH.o \
+	ol/PeekAsync.o \
+	ol/ReadAsync.o \
+	ol/ReadCharAsync.o \
+	ol/ReadLineAsync.o \
+	ol/RecordAsyncFailure.o \
+	ol/RequeuePacket.o \
+	ol/SeekAsync.o \
+	ol/SendPacket.o \
+	ol/WaitPacket.o \
+	ol/WriteAsync.o \
+	ol/WriteCharAsync.o \
+	ol/WriteLineAsync.o \
+	ol/FGetsLenAsync.o \
+	AsyncLib.o \
+	AsyncLibVer.o
+
+# Object files for static library (registered args)
+OBJS_STATIC_R = \
+	olr/CloseAsync.o \
+	olr/OpenAsync.o \
+	olr/OpenAsyncFH.o \
+	olr/OpenAsyncFromFH.o \
+	olr/PeekAsync.o \
+	olr/ReadAsync.o \
+	olr/ReadCharAsync.o \
+	olr/ReadLineAsync.o \
+	olr/RecordAsyncFailure.o \
+	olr/RequeuePacket.o \
+	olr/SeekAsync.o \
+	olr/SendPacket.o \
+	olr/WaitPacket.o \
+	olr/WriteAsync.o \
+	olr/WriteCharAsync.o \
+	olr/WriteLineAsync.o \
+	olr/FGetsLenAsync.o \
 	AsyncLib.o \
 	AsyncLibVer.o
 
 ###############################################################################
 
-LIBS = sc:lib/sc.lib lib:amiga.lib lib:debug.lib
+LIBS = sc:lib/sc.lib lib:small.lib lib:debug.lib
 
 ###############################################################################
 
-all: $(NAME) linklibs
+all: $(NAME) linklibs unittests
+
+# Create object directories
+ol olr:
+	makedir $@
 
 ###############################################################################
 
 $(NAME): $(OBJS)
-	slink $(OBJS) to $@.debug lib $(LIBS) $(LFLAGS) \
-		map $@.map,fhx fwidth 32 pwidth 32 swidth 32
-	slink $@.debug to $@ noicons nodebug
-	LibDescConverter CDIR /Include_h ASMDIR /Include_i EDIR /emodules /asyncio_lib.sfd
+	Sc LINK TO $@ $(OBJS)
 
 ###############################################################################
 
 clean:
 	delete $(NAME) $(NAME).debug $(NAME).map $(OBJS) 
 	delete /lib/asyncio.lib /lib/asyncior.lib
+	delete ol/*.o olr/*.o
+	cd unittests && smake clean
 
 version:
 	bumprev $(VERSION) $(NAME)
@@ -73,34 +128,40 @@ version:
 # Link libraries for normal linking (non-shared)
 linklibs: /lib/asyncio.lib /lib/asyncior.lib
 
-/lib/asyncio.lib: $(OBJS)
-	slink $(OBJS) to $@ lib $(LIBS) $(LFLAGS) noicons
+/lib/asyncio.lib: ol $(OBJS_STATIC)
+	Sc OBJLIB $@ $(OBJS_STATIC)
 
-/lib/asyncior.lib: $(OBJS)
-	slink $(OBJS) to $@ lib $(LIBS) $(LFLAGS) noicons
+/lib/asyncior.lib: olr $(OBJS_STATIC_R)
+	Sc OBJLIB $@ $(OBJS_STATIC_R)
 
-
-###############################################################################
 
 ###############################################################################
 
-Lib.o : Lib.c async.h Rev.h
-OpenAsync.o : OpenAsync.c async.h
-OpenAsyncFromFH.o : OpenAsyncFromFH.c async.h
-OpenAsyncFH.o : OpenAsyncFH.c async.h
-CloseAsync.o : CloseAsync.c async.h
-SeekAsync.o : SeekAsync.c async.h
-ReadAsync.o : ReadAsync.c async.h
-WriteAsync.o : WriteAsync.c async.h
-ReadCharAsync.o : ReadCharAsync.c async.h
-WriteCharAsync.o : WriteCharAsync.c async.h
-ReadLineAsync.o : ReadLineAsync.c async.h
-WriteLineAsync.o : WriteLineAsync.c async.h
-FGetsLenAsync.o : FGetsLenAsync.c async.h
-PeekAsync.o : PeekAsync.c async.h
-WaitPacket.o : WaitPacket.c async.h
-SendPacket.o : SendPacket.c async.h
-RequeuePacket.o : RequeuePacket.c async.h
-RecordAsyncFailure.o : RecordAsyncFailure.c async.h
-AsyncLib.o : AsyncLib.c async.h
-AsyncLibVer.o : AsyncLibVer.c
+# Compilation rules for shared library (LVO)
+Lib.o $(OBJS): Lib.c $(SRC)
+	Sc DEF ASIO_SHARED_LIB UTILLIB OBJNAME $@ $<
+
+# Compilation rules for static library (normal)
+$(OBJS_STATIC): ol $(SRC)
+	Sc PARAMS STACK OBJNAME $@ $<
+
+# Compilation rules for static library (registered args)
+$(OBJS_STATIC_R): olr $(SRC)
+	Sc DEF ASIO_REGARGS OBJNAME $@ $<
+
+# Special rules for AsyncLib files
+AsyncLib.o: AsyncLib.c async.h
+	Sc OBJNAME $@ $<
+
+AsyncLibVer.o: AsyncLibVer.c
+	Sc OBJNAME $@ $<
+
+###############################################################################
+
+unittests:
+	cd unittests && smake
+
+###############################################################################
+
+# Dependencies for shared library objects
+$(OBJS): async.h

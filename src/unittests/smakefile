@@ -1,0 +1,59 @@
+#
+# :ts=8
+#
+###############################################################################
+
+NAME = test_asyncio
+
+###############################################################################
+
+OPTIMIZE = optimize opttime
+#DEBUG = line
+DEBUG = symbolflush noopt
+
+###############################################################################
+
+CFLAGS = resopt idlen=64 comnest streq strmerge nostkchk \
+	includedir=include: includedir=//include \
+	$(OPTIMIZE) debug=$(DEBUG) \
+	params=register strsect=code mccons smallcode smalldata \
+	unsignedchars nomultipleincludes structureequivalence \
+	optimizescheduler noversion noicons memorysize=small \
+	stringsconst
+AFLAGS = -d
+LFLAGS = addsym smallcode smalldata noicons batch stripdebug
+
+###############################################################################
+
+OBJS = \
+	test_asyncio.o
+
+###############################################################################
+
+LIBS = sc:lib/sc.lib sc:lib/scm.lib lib:small.lib lib:debug.lib
+
+###############################################################################
+
+all: $(NAME)
+
+###############################################################################
+
+$(NAME): $(OBJS)
+	slink sc:lib/c.o $(OBJS) to $@ lib $(LIBS) $(LFLAGS) \
+		map $@.map,fhx fwidth 32 pwidth 32 swidth 32
+
+###############################################################################
+
+clean:
+	delete $(NAME) $(NAME).map $(OBJS)
+
+###############################################################################
+
+test: $(NAME)
+	run_tests
+
+###############################################################################
+
+###############################################################################
+
+test_asyncio.o : test_asyncio.c 

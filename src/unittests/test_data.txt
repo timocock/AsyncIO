@@ -1,0 +1,6 @@
+Line 1: Hello World
+Line 2: Test data
+Line 3: Short line
+Line 4: Numbers 12345
+Line 5: Special chars !@#
+Line 6: End of file 

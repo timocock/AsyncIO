@@ -10,7 +10,7 @@
 ==typedef AsyncFile
 ==bias 30
 ==public
-==version 39.2
+==version 39
 AsyncFile * OpenAsync(STRPTR fileName, ULONG mode, LONG bufferSize) (A0,D0,D1)
 AsyncFile * OpenAsyncFromFH(BPTR handle, ULONG mode, LONG bufferSize) (A0,D0,D1)
 LONG CloseAsync(AsyncFile * file) (A0)
