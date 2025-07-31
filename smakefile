@@ -1,0 +1,55 @@
+#
+# :ts=8
+#
+###############################################################################
+
+NAME = asyncio.library
+
+###############################################################################
+
+OPTIMIZE = optimize opttime
+#DEBUG = line
+DEBUG = symbolflush noopt
+
+###############################################################################
+
+CFLAGS = resopt idlen=64 comnest streq strmerge nostkchk \
+	includedir=include: $(OPTIMIZE) debug=$(DEBUG) \
+	params=register strsect=code mccons smallcode smalldata
+AFLAGS = -d
+LFLAGS = addsym smallcode smalldata noicons batch
+
+###############################################################################
+
+OBJS = \
+	$(addsuffix .o, $(basename $(notdir $(wildcard src/*.c))))
+
+###############################################################################
+
+LIBS = sc:lib/sc.lib lib:small.lib lib:amiga.lib
+
+###############################################################################
+
+all: $(NAME)
+
+###############################################################################
+
+$(NAME): $(OBJS)
+	slink $(OBJS) to $@.debug lib $(LIBS) $(LFLAGS) \
+		map $@.map,fhx fwidth 32 pwidth 32 swidth 32
+	slink $@.debug to $@ noicons nodebug
+	LibDescConverter CDIR include: EDIR emodules asyncio_lib.sfd
+
+###############################################################################
+
+clean:
+	delete $(NAME) $(NAME).debug $(NAME).map $(OBJS) FD LVO PROTOS PRAGMAS RAM all
+
+version:
+	bumprev $(VERSION) $(NAME)
+
+###############################################################################
+
+# Object dependencies (add as needed)
+src/%.o : src/%.c
+	$(CC) $(CFLAGS) -o $@ $<
