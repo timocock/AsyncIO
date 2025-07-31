@@ -96,6 +96,19 @@ static LONG test_failed = 0;
     } \
 }
 
+#define TRACE_READ_VALIDATE(file, buffer, bytes, result, expected_data, expected_length) { \
+    printf("TRACE: ReadAsync(%p, %p, %ld) = %ld\n", file, buffer, bytes, result); \
+    if (result > 0 && result <= 100) { \
+        printf("TRACE: Read data: '%.*s'\n", (int)result, (char*)buffer); \
+    } \
+    printf("TRACE: EXPECTED: '%.*s' (%ld bytes)\n", (int)expected_length, expected_data, expected_length); \
+    if (result == expected_length && result > 0) { \
+        printf("TRACE: VALIDATION: %s\n", (memcmp(buffer, expected_data, result) == 0) ? "MATCH" : "MISMATCH"); \
+    } else { \
+        printf("TRACE: VALIDATION: LENGTH MISMATCH (got %ld, expected %ld)\n", result, expected_length); \
+    } \
+}
+
 #define TRACE_WRITE(file, buffer, bytes, result) { \
     printf("TRACE: WriteAsync(%p, %p, %ld) = %ld\n", file, buffer, bytes, result); \
     if (result > 0 && result <= 100) { \
@@ -121,6 +134,16 @@ static LONG test_failed = 0;
         printf(" ('%c')", (char)result); \
     } \
     printf("\n"); \
+}
+
+#define TRACE_CHAR_READ_VALIDATE(file, result, expected_char) { \
+    printf("TRACE: ReadCharAsync(%p) = %ld", file, result); \
+    if (result >= 0 && result <= 255) { \
+        printf(" ('%c')", (char)result); \
+    } \
+    printf("\n"); \
+    printf("TRACE: EXPECTED: '%c' (%ld)\n", expected_char, (LONG)expected_char); \
+    printf("TRACE: VALIDATION: %s\n", (result == (LONG)expected_char) ? "MATCH" : "MISMATCH"); \
 }
 
 #define TRACE_CHAR_WRITE(file, ch, result) { \
@@ -579,7 +602,7 @@ BOOL test_read_operations(void)
     if (file) {
         TRACE1("Reading up to %ld bytes into buffer", sizeof(buffer) - 1);
         result = ReadAsync(file, buffer, sizeof(buffer) - 1);
-        TRACE_READ(file, buffer, sizeof(buffer) - 1, result);
+        TRACE_READ_VALIDATE(file, buffer, sizeof(buffer) - 1, result, "Test write data\n", 16);
         TEST_ASSERT(result > 0, "ReadAsync should read some data");
         
         buffer[result] = '\0';
@@ -604,17 +627,17 @@ BOOL test_read_operations(void)
     if (file) {
         TRACE("Reading first character");
         byte_read = ReadCharAsync(file);
-        TRACE_CHAR_READ(file, byte_read);
+        TRACE_CHAR_READ_VALIDATE(file, byte_read, 'X');
         TEST_ASSERT(byte_read == 'X', "ReadCharAsync should read 'X'");
         
         TRACE("Reading second character");
         byte_read = ReadCharAsync(file);
-        TRACE_CHAR_READ(file, byte_read);
+        TRACE_CHAR_READ_VALIDATE(file, byte_read, 'Y');
         TEST_ASSERT(byte_read == 'Y', "ReadCharAsync should read 'Y'");
         
         TRACE("Reading third character");
         byte_read = ReadCharAsync(file);
-        TRACE_CHAR_READ(file, byte_read);
+        TRACE_CHAR_READ_VALIDATE(file, byte_read, 'Z');
         TEST_ASSERT(byte_read == 'Z', "ReadCharAsync should read 'Z'");
         
         TRACE("Reading at EOF");
@@ -651,6 +674,7 @@ BOOL test_seek_operations(void)
         TEST_ASSERT(result >= 0, "SeekAsync should succeed");
         
         result = ReadAsync(file, buffer, 5);
+        TRACE_READ_VALIDATE(file, buffer, 5, result, "Test ", 5);
         TEST_ASSERT(result == 5, "ReadAsync should read 5 bytes after seek");
         
         result = CloseAsync(file);
@@ -670,6 +694,7 @@ BOOL test_seek_operations(void)
         TEST_ASSERT(result >= 0, "SeekAsync should succeed");
         
         result = ReadAsync(file, buffer, 5);
+        TRACE_READ_VALIDATE(file, buffer, 5, result, "write", 5);
         TEST_ASSERT(result == 5, "ReadAsync should read 5 bytes after seek");
         
         result = CloseAsync(file);
@@ -714,13 +739,18 @@ BOOL test_peek_operations(void)
     if (file) {
         /* Peek first 5 bytes */
         result = PeekAsync(file, buffer1, 5);
+        TRACE_PEEK(file, buffer1, 5, result);
         TEST_ASSERT(result == 5, "PeekAsync should read 5 bytes");
         
         /* Read the same 5 bytes */
         result = ReadAsync(file, buffer2, 5);
+        TRACE_READ(file, buffer2, 5, result);
         TEST_ASSERT(result == 5, "ReadAsync should read 5 bytes");
         
         /* Compare the data */
+        printf("TRACE: PEEKED: '%.*s'\n", 5, buffer1);
+        printf("TRACE: READ: '%.*s'\n", 5, buffer2);
+        printf("TRACE: VALIDATION: %s\n", (memcmp(buffer1, buffer2, 5) == 0) ? "MATCH" : "MISMATCH");
         TEST_ASSERT(memcmp(buffer1, buffer2, 5) == 0, "Peeked and read data should be identical");
         
         result = CloseAsync(file);
@@ -768,6 +798,9 @@ BOOL test_line_operations(void)
     if (file) {
         for (i = 0; test_strings[i] != NULL; i++) {
             result = ReadLineAsync(file, buffer, sizeof(buffer));
+            TRACE_LINE_READ(file, buffer, sizeof(buffer), result);
+            printf("TRACE: EXPECTED: '%s' (%ld bytes)\n", test_strings[i], strlen(test_strings[i]));
+            printf("TRACE: VALIDATION: %s\n", (strcmp(buffer, test_strings[i]) == 0) ? "MATCH" : "MISMATCH");
             TEST_ASSERT(result == strlen(test_strings[i]), "ReadLineAsync should read correct number of bytes");
             TEST_ASSERT(strcmp(buffer, test_strings[i]) == 0, "ReadLineAsync should read correct data");
         }
@@ -787,6 +820,12 @@ BOOL test_line_operations(void)
     if (file) {
         for (i = 0; test_strings[i] != NULL; i++) {
             APTR result_ptr = FGetsAsync(file, buffer, sizeof(buffer));
+            printf("TRACE: FGetsAsync(%p, %p, %ld) = %p\n", file, buffer, sizeof(buffer), result_ptr);
+            if (result_ptr == buffer) {
+                printf("TRACE: FGetsAsync read: '%s'\n", buffer);
+            }
+            printf("TRACE: EXPECTED: '%s'\n", test_strings[i]);
+            printf("TRACE: VALIDATION: %s\n", (strcmp(buffer, test_strings[i]) == 0) ? "MATCH" : "MISMATCH");
             TEST_ASSERT(result_ptr == buffer, "FGetsAsync should return buffer pointer");
             TEST_ASSERT(strcmp(buffer, test_strings[i]) == 0, "FGetsAsync should read correct data");
         }
