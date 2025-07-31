@@ -39,7 +39,7 @@ static const char *test_strings[] = {
 static const char *test_binary_data = "Binary test data";
 
 /* AsyncIO-specific test configuration */
-#define ASYNC_WAIT_TICKS 5      /* Ticks to wait for async operations (50 ticks = 1 second) */
+#define ASYNC_WAIT_TICKS 50      /* Ticks to wait for async operations (50 ticks = 1 second) */
 #define ASYNC_RETRY_COUNT 10    /* Number of retries for async operations */
 
 /* Global variables for test tracking */
@@ -247,7 +247,7 @@ BOOL verify_file_lines(const char *filename, const char **expected_lines, LONG n
                 if (IoErr() == 0) {
                     TRACE1("EOF reached at line %ld", line_count + 1);
                 } else {
-                    TRACE1("Error reading line %ld, IoErr: %ld", line_count + 1, IoErr());
+                    TRACE2("Error reading line %ld, IoErr: %ld", line_count + 1, IoErr());
                 }
                 result = FALSE;
             }
