@@ -21,8 +21,8 @@ struct Library *AsyncIOBase;
 
 /* Test configuration */
 #define TEST_BUFFER_SIZE 8192
-#define TEST_FILE_NAME "asyncio_test.dat"
-#define TEST_FILE_NAME2 "asyncio_test2.dat"
+#define TEST_FILE_NAME "T:asyncio_test.dat"
+#define TEST_FILE_NAME2 "T:asyncio_test2.dat"
 #define MAX_LINE_LENGTH 256
 
 /* Test data - Diverse content with Latin-1 characters (with newlines - WriteLineAsync doesn't add them) */
@@ -199,6 +199,7 @@ BOOL verify_file_content(const char *filename, const char *expected_data, LONG e
 BOOL verify_file_lines(const char *filename, const char **expected_lines, LONG num_lines);
 BOOL create_test_file(const char *filename, const char *content, LONG length);
 LONG get_file_size(const char *filename);
+BOOL check_t_volume_available(void);
 
 /* AsyncIO helper functions */
 
@@ -400,6 +401,40 @@ LONG get_file_size(const char *filename)
     return -1;
 }
 
+/* Check if T: volume is available and writable */
+BOOL check_t_volume_available(void)
+{
+    BPTR test_file;
+    LONG io_error;
+    
+    TRACE("Checking T: volume availability");
+    
+    /* Try to create a test file in T: */
+    test_file = Open("T:asyncio_test_check", MODE_WRITE);
+    if (test_file != 0) {
+        Write(test_file, "test", 4);
+        Close(test_file);
+        
+        /* Try to read it back */
+        test_file = Open("T:asyncio_test_check", MODE_READ);
+        if (test_file != 0) {
+            Close(test_file);
+            DeleteFile("T:asyncio_test_check");
+            TRACE("T: volume is available and writable");
+            return TRUE;
+        } else {
+            io_error = IoErr();
+            TRACE2("T: volume read test failed: IoErr = %ld", io_error);
+        }
+    } else {
+        io_error = IoErr();
+        TRACE2("T: volume write test failed: IoErr = %ld", io_error);
+    }
+    
+    TRACE("T: volume is not available or not writable");
+    return FALSE;
+}
+
 /* Main test function */
 int main(int argc, char *argv[])
 {
@@ -418,6 +453,14 @@ int main(int argc, char *argv[])
     
     printf("=== AsyncIO Library Unit Test Suite ===\n");
     printf("Testing all functions from asyncio.doc\n\n");
+
+    /* Check T: volume availability */
+    if (!check_t_volume_available()) {
+        printf("ERROR: T: volume is not available or not writable\n");
+        printf("This test requires T: volume for safe file operations\n");
+        return 1;
+    }
+    printf("T: volume is available and writable\n\n");
 
 #ifdef ASIO_SHARED_LIB
     /* Open the asyncio.library for shared library version */
@@ -1572,8 +1615,8 @@ BOOL test_sophisticated_files(void)
 
     TEST_START("Sophisticated file operations - Write to new file");
     TRACE("Creating new file with sophisticated content");
-    file = OpenAsync((STRPTR)"asyncio_sophisticated.dat", MODE_WRITE, TEST_BUFFER_SIZE);
-    TRACE_OPEN(file, "asyncio_sophisticated.dat", MODE_WRITE, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)"T:asyncio_sophisticated.dat", MODE_WRITE, TEST_BUFFER_SIZE);
+    TRACE_OPEN(file, "T:asyncio_sophisticated.dat", MODE_WRITE, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed for writing");
     
     if (file) {
@@ -1600,7 +1643,7 @@ BOOL test_sophisticated_files(void)
         wait_for_async_operation();
         
         /* Verify using dos.library */
-        TEST_ASSERT(verify_file_content("asyncio_sophisticated.dat", sophisticated_content, content_length),
+        TEST_ASSERT(verify_file_content("T:asyncio_sophisticated.dat", sophisticated_content, content_length),
                    "Sophisticated file content should match written data");
         
         TEST_PASS();
@@ -1672,8 +1715,8 @@ BOOL test_file_copy_validation(void)
     /* If test_data.txt is not accessible via dos.library, try to create a test file */
     if (original_size <= 0) {
         TRACE("test_data.txt not accessible, creating test file for copy validation");
-        if (create_test_file("asyncio_copy_source.dat", "Test data for copy validation\n", 29)) {
-            original_size = get_file_size("asyncio_copy_source.dat");
+        if (create_test_file("T:asyncio_copy_source.dat", "Test data for copy validation\n", 29)) {
+            original_size = get_file_size("T:asyncio_copy_source.dat");
             TRACE1("Created test file size: %ld bytes", original_size);
         }
     }
@@ -1685,7 +1728,7 @@ BOOL test_file_copy_validation(void)
     }
 
     /* Step 1: Read from source file using AsyncIO */
-    source_filename = (original_size > 0) ? "test_data.txt" : "asyncio_copy_source.dat";
+    source_filename = (original_size > 0) ? "test_data.txt" : "T:asyncio_copy_source.dat";
     TRACE1("Step 1: Reading from source file (%s)", source_filename);
     src_file = OpenAsync((STRPTR)source_filename, MODE_READ, TEST_BUFFER_SIZE);
     TRACE_OPEN(src_file, source_filename, MODE_READ, TEST_BUFFER_SIZE);
@@ -1696,9 +1739,9 @@ BOOL test_file_copy_validation(void)
     }
 
     /* Step 2: Write to destination file using AsyncIO */
-    TRACE("Step 2: Writing to destination file (asyncio_copy_test.dat)");
-    dst_file = OpenAsync((STRPTR)"asyncio_copy_test.dat", MODE_WRITE, TEST_BUFFER_SIZE);
-    TRACE_OPEN(dst_file, "asyncio_copy_test.dat", MODE_WRITE, TEST_BUFFER_SIZE);
+    TRACE("Step 2: Writing to destination file (T:asyncio_copy_test.dat)");
+    dst_file = OpenAsync((STRPTR)"T:asyncio_copy_test.dat", MODE_WRITE, TEST_BUFFER_SIZE);
+    TRACE_OPEN(dst_file, "T:asyncio_copy_test.dat", MODE_WRITE, TEST_BUFFER_SIZE);
     TEST_ASSERT(dst_file != NULL, "OpenAsync should succeed for destination file");
     
     if (!dst_file) {
@@ -1736,14 +1779,14 @@ BOOL test_file_copy_validation(void)
     wait_for_async_operation();
     
     /* Step 4: Verify copied file size */
-    copied_size = get_file_size("asyncio_copy_test.dat");
+    copied_size = get_file_size("T:asyncio_copy_test.dat");
     TRACE2("File size verification: original=%ld, copied=%ld", original_size, copied_size);
     TEST_ASSERT(copied_size == original_size, "Copied file should have same size as original");
 
     /* Step 5: Read back copied file and compare with original */
     TRACE("Step 5: Reading back copied file for byte-by-byte comparison");
-    verify_file = OpenAsync((STRPTR)"asyncio_copy_test.dat", MODE_READ, TEST_BUFFER_SIZE);
-    TRACE_OPEN(verify_file, "asyncio_copy_test.dat", MODE_READ, TEST_BUFFER_SIZE);
+    verify_file = OpenAsync((STRPTR)"T:asyncio_copy_test.dat", MODE_READ, TEST_BUFFER_SIZE);
+    TRACE_OPEN(verify_file, "T:asyncio_copy_test.dat", MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(verify_file != NULL, "OpenAsync should succeed for verification file");
     
     if (!verify_file) {
@@ -1826,7 +1869,7 @@ BOOL test_file_copy_validation(void)
     if (original_size > 0) {
         /* Copy binary file */
         src_file = OpenAsync((STRPTR)"test_binary.dat", MODE_READ, TEST_BUFFER_SIZE);
-        dst_file = OpenAsync((STRPTR)"asyncio_binary_copy.dat", MODE_WRITE, TEST_BUFFER_SIZE);
+        dst_file = OpenAsync((STRPTR)"T:asyncio_binary_copy.dat", MODE_WRITE, TEST_BUFFER_SIZE);
         
         if (src_file && dst_file) {
             total_read = 0;
@@ -1846,11 +1889,11 @@ BOOL test_file_copy_validation(void)
             wait_for_async_operation();
             
             /* Verify binary file copy */
-            copied_size = get_file_size("asyncio_binary_copy.dat");
+            copied_size = get_file_size("T:asyncio_binary_copy.dat");
             TEST_ASSERT(copied_size == original_size, "Binary file copy should have same size");
             
             /* Use dos.library to verify binary content */
-            TEST_ASSERT(verify_file_content("asyncio_binary_copy.dat", NULL, original_size), 
+            TEST_ASSERT(verify_file_content("T:asyncio_binary_copy.dat", NULL, original_size), 
                        "Binary file content should match original");
         }
     }
@@ -1865,55 +1908,35 @@ void cleanup_test_files(void)
     TRACE("Starting file cleanup");
     printf("\nCleaning up test files...\n");
     
+    /* Force cleanup of any existing test files */
+    TRACE("Force cleaning any existing test files");
+    
+    /* Delete main test files */
     TRACE1("Deleting test file: %s", TEST_FILE_NAME);
-    if (DeleteFile(TEST_FILE_NAME) == 0) {
-        printf("Deleted %s\n", TEST_FILE_NAME);
-        TRACE1("Successfully deleted %s", TEST_FILE_NAME);
-    } else {
-        TRACE2("Failed to delete %s, IoErr: %ld", TEST_FILE_NAME, IoErr());
-    }
+    DeleteFile(TEST_FILE_NAME); /* Don't check return value - file might not exist */
+    printf("Cleaned %s\n", TEST_FILE_NAME);
     
     TRACE1("Deleting test file: %s", TEST_FILE_NAME2);
-    if (DeleteFile(TEST_FILE_NAME2) == 0) {
-        printf("Deleted %s\n", TEST_FILE_NAME2);
-        TRACE1("Successfully deleted %s", TEST_FILE_NAME2);
-    } else {
-        TRACE2("Failed to delete %s, IoErr: %ld", TEST_FILE_NAME2, IoErr());
-    }
+    DeleteFile(TEST_FILE_NAME2); /* Don't check return value - file might not exist */
+    printf("Cleaned %s\n", TEST_FILE_NAME2);
     
     /* Clean up sophisticated test files */
-    TRACE("Deleting sophisticated test file: asyncio_sophisticated.dat");
-    if (DeleteFile("asyncio_sophisticated.dat") == 0) {
-        printf("Deleted asyncio_sophisticated.dat\n");
-        TRACE("Successfully deleted asyncio_sophisticated.dat");
-    } else {
-        TRACE2("Failed to delete %s, IoErr: %ld", "asyncio_sophisticated.dat", IoErr());
-    }
+    TRACE("Deleting sophisticated test file: T:asyncio_sophisticated.dat");
+    DeleteFile("T:asyncio_sophisticated.dat");
+    printf("Cleaned T:asyncio_sophisticated.dat\n");
     
     /* Clean up copy validation test files */
     TRACE("Deleting copy validation test files");
-    if (DeleteFile("asyncio_copy_test.dat") == 0) {
-        printf("Deleted asyncio_copy_test.dat\n");
-        TRACE("Successfully deleted asyncio_copy_test.dat");
-    } else {
-        TRACE2("Failed to delete %s, IoErr: %ld", "asyncio_copy_test.dat", IoErr());
-    }
+    DeleteFile("T:asyncio_copy_test.dat");
+    printf("Cleaned T:asyncio_copy_test.dat\n");
     
-    if (DeleteFile("asyncio_binary_copy.dat") == 0) {
-        printf("Deleted asyncio_binary_copy.dat\n");
-        TRACE("Successfully deleted asyncio_binary_copy.dat");
-    } else {
-        TRACE2("Failed to delete %s, IoErr: %ld", "asyncio_binary_copy.dat", IoErr());
-    }
+    DeleteFile("T:asyncio_binary_copy.dat");
+    printf("Cleaned T:asyncio_binary_copy.dat\n");
     
     /* Clean up additional test files created during testing */
     TRACE("Deleting additional test files");
-    if (DeleteFile("asyncio_copy_source.dat") == 0) {
-        printf("Deleted asyncio_copy_source.dat\n");
-        TRACE("Successfully deleted asyncio_copy_source.dat");
-    } else {
-        TRACE2("Failed to delete %s, IoErr: %ld", "asyncio_copy_source.dat", IoErr());
-    }
+    DeleteFile("T:asyncio_copy_source.dat");
+    printf("Cleaned T:asyncio_copy_source.dat\n");
     
     TRACE("File cleanup completed");
 }
