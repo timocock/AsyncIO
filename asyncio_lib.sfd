@@ -1,17 +1,4 @@
 * "asyncio.library"
-==license Copyright 2024 AsyncIO Library Contributors
-==license
-==license This program is free software: you can redistribute it and/or modify
-==license it under the terms of the GNU Lesser General Public License as published by
-==license the Free Software Foundation, version 2.1 of the License.
-==license
-==license This program is distributed in the hope that it will be useful,
-==license but WITHOUT ANY WARRANTY; without even the implied warranty of
-==license MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-==license GNU Lesser General Public License for more details.
-==license
-==license You should have received a copy of the GNU Lesser General Public License
-==license along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ==base _AsyncIOBase
 ==basetype struct Library *
 ==libname asyncio.library
