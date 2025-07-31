@@ -581,37 +581,45 @@ BOOL test_basic_file_read(void)
     LONG total_read = 0;
     LONG expected_size;
     
-    /* Hardcoded expected content from test_data.txt */
-    static const char *expected_content = 
-        "Line 1: The quick brown fox jumps over the lazy dog\n"
-        "Line 2: Pack my box with five dozen liquor jugs\n"
-        "Line 3: How vexingly quick daft zebras jump!\n"
-        "Line 4: The five boxing wizards jump quickly\n"
-        "Line 5: Sphinx of black quartz, judge my vow\n"
-        "Line 6: Amazingly few discotheques provide jukeboxes\n"
-        "Line 7: The quick onyx goblin jumps over the lazy dwarf\n"
-        "Line 8: Pack my red box with five dozen quality jugs\n"
-        "Line 9: How quickly daft jumping zebras vex!\n"
-        "Line 10: Sphinx of black quartz, judge my vow\n"
-        "Line 11: The five boxing wizards jump quickly\n"
-        "Line 12: Amazingly few discotheques provide jukeboxes\n"
-        "Line 13: Pack my box with five dozen liquor jugs\n"
-        "Line 14: How vexingly quick daft zebras jump!\n"
-        "Line 15: The quick brown fox jumps over the lazy dog\n"
-        "Line 16: Special characters: éèêëàáâäùúûüçñÿœæ\n"
-        "Line 17: Numbers and symbols: 12345 67890 !@#$%^&*() _+-=[]{}|;':\",./<>?\n"
-        "Line 18: Mixed content: ABC123!@# 456DEF789\n"
-        "Line 19: Empty line follows:\n"
-        "\n"
-        "Line 20: Line after empty line\n"
-        "Line 21: Very long line that might span multiple buffers or require multiple async operations to complete properly in the double-buffered system\n"
-        "Line 22: Final line with end-of-file marker \n";
+    /* Expected content from test_data.txt - broken into smaller chunks to avoid relocation issues */
+    static const char *expected_lines[] = {
+        "Line 1: The quick brown fox jumps over the lazy dog\n",
+        "Line 2: Pack my box with five dozen liquor jugs\n",
+        "Line 3: How vexingly quick daft zebras jump!\n",
+        "Line 4: The five boxing wizards jump quickly\n",
+        "Line 5: Sphinx of black quartz, judge my vow\n",
+        "Line 6: Amazingly few discotheques provide jukeboxes\n",
+        "Line 7: The quick onyx goblin jumps over the lazy dwarf\n",
+        "Line 8: Pack my red box with five dozen quality jugs\n",
+        "Line 9: How quickly daft jumping zebras vex!\n",
+        "Line 10: Sphinx of black quartz, judge my vow\n",
+        "Line 11: The five boxing wizards jump quickly\n",
+        "Line 12: Amazingly few discotheques provide jukeboxes\n",
+        "Line 13: Pack my box with five dozen liquor jugs\n",
+        "Line 14: How vexingly quick daft zebras jump!\n",
+        "Line 15: The quick brown fox jumps over the lazy dog\n",
+        "Line 16: Special characters: éèêëàáâäùúûüçñÿœæ\n",
+        "Line 17: Numbers and symbols: 12345 67890 !@#$%^&*() _+-=[]{}|;':\",./<>?\n",
+        "Line 18: Mixed content: ABC123!@# 456DEF789\n",
+        "Line 19: Empty line follows:\n",
+        "\n",
+        "Line 20: Line after empty line\n",
+        "Line 21: Very long line that might span multiple buffers or require multiple async operations to complete properly in the double-buffered system\n",
+        "Line 22: Final line with end-of-file marker \n",
+        NULL
+    };
 
     TEST_START("Basic file read validation - Read test_data.txt and verify content");
     TRACE("Testing basic file read functionality with test_data.txt");
     
-    /* Get expected file size */
-    expected_size = strlen(expected_content);
+    /* Calculate expected file size from lines */
+    expected_size = 0;
+    {
+        LONG i;
+        for (i = 0; expected_lines[i] != NULL; i++) {
+            expected_size += strlen(expected_lines[i]);
+        }
+    }
     TRACE1("Expected file size: %ld bytes", expected_size);
     
     /* Open the test file */
@@ -660,22 +668,52 @@ BOOL test_basic_file_read(void)
             /* Null-terminate for string comparison */
             read_buffer[bytes_read] = '\0';
             
-            /* Compare content */
-            TRACE("Comparing file content with expected data");
-            if (memcmp(read_buffer, expected_content, expected_size) == 0) {
-                TRACE("Content validation: MATCH");
-                printf("    ASSERT: File content matches expected data - OK\n");
-            } else {
-                TRACE("Content validation: MISMATCH");
-                printf("    ASSERT: File content matches expected data - FAILED\n");
-                printf("TRACE: First 100 bytes of read content:\n");
-                printf("TRACE: '%.100s'\n", read_buffer);
-                printf("TRACE: First 100 bytes of expected content:\n");
-                printf("TRACE: '%.100s'\n", expected_content);
-                TEST_FAIL("File content should match expected data");
-                free(read_buffer);
-                CloseAsync(file);
-                return FALSE;
+            /* Compare content line by line */
+            TRACE("Comparing file content with expected data line by line");
+            {
+                LONG line_num = 0;
+                char *line_start = read_buffer;
+                char *line_end;
+                BOOL content_matches = TRUE;
+                
+                while (expected_lines[line_num] != NULL && line_start < read_buffer + bytes_read) {
+                    /* Find end of current line */
+                    line_end = strchr(line_start, '\n');
+                    if (line_end) {
+                        line_end++; /* Include the newline */
+                    } else {
+                        line_end = read_buffer + bytes_read; /* End of file */
+                    }
+                    
+                    /* Compare this line */
+                    LONG line_len = line_end - line_start;
+                    LONG expected_line_len = strlen(expected_lines[line_num]);
+                    
+                    if (line_len != expected_line_len || 
+                        memcmp(line_start, expected_lines[line_num], line_len) != 0) {
+                        TRACE3("Line %ld mismatch: expected '%s', got '%.*s'", 
+                               line_num + 1, expected_lines[line_num], (int)line_len, line_start);
+                        content_matches = FALSE;
+                        break;
+                    }
+                    
+                    line_start = line_end;
+                    line_num++;
+                }
+                
+                if (content_matches && line_start >= read_buffer + bytes_read) {
+                    TRACE("Content validation: MATCH");
+                    printf("    ASSERT: File content matches expected data - OK\n");
+                } else {
+                    TRACE("Content validation: MISMATCH");
+                    printf("    ASSERT: File content matches expected data - FAILED\n");
+                    printf("TRACE: First 100 bytes of read content:\n");
+                    printf("TRACE: '%.100s'\n", read_buffer);
+                    TEST_FAIL("File content should match expected data");
+                    free(read_buffer);
+                    CloseAsync(file);
+                    return FALSE;
+                }
             }
             
             free(read_buffer);
