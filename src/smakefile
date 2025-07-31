@@ -14,7 +14,7 @@ DEBUG = symbolflush noopt
 ###############################################################################
 
 CFLAGS = resopt idlen=64 comnest streq strmerge nostkchk \
-	includedir=include: $(OPTIMIZE) debug=$(DEBUG) \
+	includedir=../include: $(OPTIMIZE) debug=$(DEBUG) \
 	params=register strsect=code mccons smallcode smalldata
 AFLAGS = -d
 LFLAGS = addsym smallcode smalldata noicons batch
@@ -57,15 +57,15 @@ $(NAME): $(OBJS)
 	slink $(OBJS) to $@.debug lib $(LIBS) $(LFLAGS) \
 		map $@.map,fhx fwidth 32 pwidth 32 swidth 32
 	slink $@.debug to $@ noicons nodebug
-	LibDescConverter CDIR include: EDIR emodules asyncio_lib.sfd
+	LibDescConverter CDIR ../include: EDIR ../emodules ../asyncio_lib.sfd
 
 ###############################################################################
 
 clean:
 	delete $(NAME) $(NAME).debug $(NAME).map $(OBJS) FD LVO PROTOS PRAGMAS RAM all
-	delete lib/asyncio.lib lib/asyncior.lib
-	delete dlib/asynciolibs.lib dlib/asynciolibsr.lib dlib/asyncios.lib dlib/asynciosr.lib
-	delete include/pragmas/asyncio_pragmas.h
+	delete ../lib/asyncio.lib ../lib/asyncior.lib
+	delete ../dlib/asynciolibs.lib ../dlib/asynciolibsr.lib ../dlib/asyncios.lib ../dlib/asynciosr.lib
+	delete ../include/pragmas/asyncio_pragmas.h
 
 version:
 	bumprev $(VERSION) $(NAME)
@@ -73,33 +73,33 @@ version:
 ###############################################################################
 
 # Link libraries for normal linking (non-shared)
-linklibs: lib/asyncio.lib lib/asyncior.lib
+linklibs: ../lib/asyncio.lib ../lib/asyncior.lib
 
-lib/asyncio.lib: $(OBJS)
+../lib/asyncio.lib: $(OBJS)
 	slink $(OBJS) to $@ lib $(LIBS) $(LFLAGS) noicons
 
-lib/asyncior.lib: $(OBJS)
+../lib/asyncior.lib: $(OBJS)
 	slink $(OBJS) to $@ lib $(LIBS) $(LFLAGS) noicons
 
 # DICE libraries for shared library linking
-dicelibs: dlib/asynciolibs.lib dlib/asynciolibsr.lib dlib/asyncios.lib dlib/asynciosr.lib
+dicelibs: ../dlib/asynciolibs.lib ../dlib/asynciolibsr.lib ../dlib/asyncios.lib ../dlib/asynciosr.lib
 
-dlib/asynciolibs.lib: asyncio_lib.sfd
+../dlib/asynciolibs.lib: ../asyncio_lib.sfd
 	FDToLib -o$@ $< -auto asyncio.library
 
-dlib/asynciolibsr.lib: asyncio_lib.sfd
+../dlib/asynciolibsr.lib: ../asyncio_lib.sfd
 	FDToLib -o$@ $< -mr -hasynciolibsr.h -auto asyncio.library
 
-dlib/asyncios.lib:
+../dlib/asyncios.lib:
 	LbMake asyncio s
 
-dlib/asynciosr.lib:
+../dlib/asynciosr.lib:
 	LbMake asyncio s r
 
 # Pragma file generation
-pragma: include/pragmas/asyncio_pragmas.h
+pragma: ../include/pragmas/asyncio_pragmas.h
 
-include/pragmas/asyncio_pragmas.h: asyncio_lib.sfd
+../include/pragmas/asyncio_pragmas.h: ../asyncio_lib.sfd
 	FDTOPragma -o$@ $<
 
 ###############################################################################
