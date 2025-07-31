@@ -173,7 +173,8 @@ void wait_for_async_operation(void)
 {
     TRACE("Waiting for async operation to complete");
     /* Give the file system time to complete background operations */
-    Delay(ASYNC_WAIT_TIME / 1000000);
+    /* Note: Delay() takes ticks (50 per second), so convert microseconds to ticks */
+    Delay((ASYNC_WAIT_TIME * 50) / 1000000);
     TRACE("Async operation wait completed");
 }
 
@@ -224,8 +225,10 @@ BOOL verify_file_lines(const char *filename, const char **expected_lines, LONG n
     file = Open(filename, MODE_READ);
     if (file != 0) {
         while (line_count < num_lines && expected_lines[line_count] != NULL) {
-            line_read = FGets(file, buffer, sizeof(buffer));
+            /* FGets() returns pointer to buffer or NULL for EOF/error */
+            line_read = FGets(file, buffer, sizeof(buffer) - 1); /* -1 to avoid V36/V37 bug */
             if (line_read != NULL) {
+                /* FGets() null-terminates the string and includes newline as last character */
                 /* Remove newline if present */
                 LONG len = strlen(buffer);
                 if (len > 0 && buffer[len - 1] == '\n') {
@@ -240,7 +243,12 @@ BOOL verify_file_lines(const char *filename, const char **expected_lines, LONG n
                     TRACE2("Line %ld verified: '%s'", line_count + 1, buffer);
                 }
             } else {
-                TRACE1("Failed to read line %ld", line_count + 1);
+                /* Check if it's EOF (IoErr() returns 0) or error */
+                if (IoErr() == 0) {
+                    TRACE1("EOF reached at line %ld", line_count + 1);
+                } else {
+                    TRACE1("Error reading line %ld, IoErr: %ld", line_count + 1, IoErr());
+                }
                 result = FALSE;
             }
             line_count++;
