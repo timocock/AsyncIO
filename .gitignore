@@ -1,0 +1,50 @@
+# Amiga and C Development Exclusions
+
+# Object files
+*.o
+*.obj
+
+# Libraries
+*.lib
+*.library
+*.library.debug
+*.library.map
+
+# Debug files
+*.debug
+*.map
+*.sym
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-*
+*.code-workspace
+
+# Log files
+*.log
+
+# Amiga specific
+*.lst
+*.cod
+*.gst
+*.map
+*.uaem
+a.out
+
+output.txt
