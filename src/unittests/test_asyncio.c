@@ -675,6 +675,8 @@ BOOL test_basic_file_read(void)
                 char *line_start = read_buffer;
                 char *line_end;
                 BOOL content_matches = TRUE;
+                LONG line_len;
+                LONG expected_line_len;
                 
                 while (expected_lines[line_num] != NULL && line_start < read_buffer + bytes_read) {
                     /* Find end of current line */
@@ -686,13 +688,13 @@ BOOL test_basic_file_read(void)
                     }
                     
                     /* Compare this line */
-                    LONG line_len = line_end - line_start;
-                    LONG expected_line_len = strlen(expected_lines[line_num]);
+                    line_len = line_end - line_start;
+                    expected_line_len = strlen(expected_lines[line_num]);
                     
                     if (line_len != expected_line_len || 
                         memcmp(line_start, expected_lines[line_num], line_len) != 0) {
-                        TRACE3("Line %ld mismatch: expected '%s', got '%.*s'", 
-                               line_num + 1, expected_lines[line_num], (int)line_len, line_start);
+                        TRACE2("Line %ld mismatch: expected '%s'", line_num + 1, expected_lines[line_num]);
+                        TRACE2("Line %ld mismatch: got '%.*s'", line_num + 1, (int)line_len, line_start);
                         content_matches = FALSE;
                         break;
                     }
@@ -736,7 +738,7 @@ BOOL test_open_close(void)
 
     TEST_START("OpenAsync - Create new file for writing");
     TRACE1("Creating new file for writing: %s", TEST_FILE_NAME);
-    file = OpenAsync(TEST_FILE_NAME, MODE_WRITE, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)TEST_FILE_NAME, MODE_WRITE, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, TEST_FILE_NAME, MODE_WRITE, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should return valid file handle");
     if (file) {
@@ -752,7 +754,7 @@ BOOL test_open_close(void)
 
     TEST_START("OpenAsync - Open existing file for reading");
     TRACE1("Opening existing file for reading: %s", TEST_FILE_NAME);
-    file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should return valid file handle for reading");
     if (file) {
@@ -768,7 +770,7 @@ BOOL test_open_close(void)
 
     TEST_START("OpenAsync - Append mode");
     TRACE1("Opening file for append mode: %s", TEST_FILE_NAME);
-    file = OpenAsync(TEST_FILE_NAME, MODE_APPEND, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)TEST_FILE_NAME, MODE_APPEND, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, TEST_FILE_NAME, MODE_APPEND, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should return valid file handle for appending");
     if (file) {
@@ -802,7 +804,7 @@ BOOL test_write_operations(void)
 
     TEST_START("WriteAsync - Write data to file");
     TRACE1("Opening file for writing: %s", TEST_FILE_NAME);
-    file = OpenAsync(TEST_FILE_NAME, MODE_WRITE, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)TEST_FILE_NAME, MODE_WRITE, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, TEST_FILE_NAME, MODE_WRITE, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
@@ -832,7 +834,7 @@ BOOL test_write_operations(void)
 
     TEST_START("WriteCharAsync - Write single characters");
     TRACE1("Opening file for character writing: %s", TEST_FILE_NAME2);
-    file = OpenAsync(TEST_FILE_NAME2, MODE_WRITE, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)TEST_FILE_NAME2, MODE_WRITE, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, TEST_FILE_NAME2, MODE_WRITE, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
@@ -875,7 +877,7 @@ BOOL test_read_operations(void)
 
     TEST_START("ReadAsync - Read data from file");
     TRACE1("Opening file for reading: %s", TEST_FILE_NAME);
-    file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
@@ -900,7 +902,7 @@ BOOL test_read_operations(void)
 
     TEST_START("ReadCharAsync - Read single characters");
     TRACE1("Opening file for character reading: %s", TEST_FILE_NAME2);
-    file = OpenAsync(TEST_FILE_NAME2, MODE_READ, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)TEST_FILE_NAME2, MODE_READ, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, TEST_FILE_NAME2, MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
@@ -946,7 +948,7 @@ BOOL test_seek_operations(void)
     char buffer[10];
 
     TEST_START("SeekAsync - Seek to beginning of file");
-    file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
     if (file) {
@@ -966,7 +968,7 @@ BOOL test_seek_operations(void)
     }
 
     TEST_START("SeekAsync - Seek from current position");
-    file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
     if (file) {
@@ -986,7 +988,7 @@ BOOL test_seek_operations(void)
     }
 
     TEST_START("SeekAsync - Get current position");
-    file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
     if (file) {
@@ -1013,7 +1015,7 @@ BOOL test_peek_operations(void)
     char buffer1[10], buffer2[10];
 
     TEST_START("PeekAsync - Peek without advancing file pointer");
-    file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
     if (file) {
@@ -1054,7 +1056,7 @@ BOOL test_line_operations(void)
     int i;
 
     TEST_START("WriteLineAsync - Write lines to file");
-    file = OpenAsync(TEST_FILE_NAME, MODE_WRITE, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)TEST_FILE_NAME, MODE_WRITE, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
     if (file) {
@@ -1072,7 +1074,7 @@ BOOL test_line_operations(void)
     }
 
     TEST_START("ReadLineAsync - Read lines from file");
-    file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
     if (file) {
@@ -1094,7 +1096,7 @@ BOOL test_line_operations(void)
     }
 
     TEST_START("FGetsAsync - Read lines with FGetsAsync");
-    file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
     if (file) {
@@ -1119,7 +1121,7 @@ BOOL test_line_operations(void)
     }
 
     TEST_START("FGetsLenAsync - Read lines with length tracking");
-    file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
     if (file) {
@@ -1150,7 +1152,7 @@ BOOL test_char_operations(void)
 
     TEST_START("WriteCharAsync - Write individual characters");
     TRACE1("Opening file for character writing: %s", TEST_FILE_NAME2);
-    file = OpenAsync(TEST_FILE_NAME2, MODE_WRITE, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)TEST_FILE_NAME2, MODE_WRITE, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, TEST_FILE_NAME2, MODE_WRITE, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
@@ -1182,7 +1184,7 @@ BOOL test_char_operations(void)
 
     TEST_START("ReadCharAsync - Read individual characters");
     TRACE1("Opening file for character reading: %s", TEST_FILE_NAME2);
-    file = OpenAsync(TEST_FILE_NAME2, MODE_READ, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)TEST_FILE_NAME2, MODE_READ, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, TEST_FILE_NAME2, MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
@@ -1240,7 +1242,7 @@ BOOL test_error_handling(void)
     }
 
     TEST_START("Error handling - Read from write-only file");
-    file = OpenAsync(TEST_FILE_NAME, MODE_WRITE, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)TEST_FILE_NAME, MODE_WRITE, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
     if (file) {
@@ -1256,7 +1258,7 @@ BOOL test_error_handling(void)
     }
 
     TEST_START("Error handling - Write to read-only file");
-    file = OpenAsync(TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)TEST_FILE_NAME, MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
     if (file) {
