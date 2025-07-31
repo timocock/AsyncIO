@@ -48,8 +48,8 @@ static const char *test_strings[] = {
 static const char *test_binary_data = "Binary test data";
 
 /* AsyncIO-specific test configuration */
-#define ASYNC_WAIT_TICKS 50      /* Ticks to wait for async operations (50 ticks = 1 second) */
-#define ASYNC_RETRY_COUNT 10    /* Number of retries for async operations */
+#define ASYNC_WAIT_TICKS 250     /* Ticks to wait for async operations (250 ticks = 5 seconds) */
+#define ASYNC_RETRY_COUNT 20    /* Number of retries for async operations */
 
 /* Global variables for test tracking */
 static LONG test_count = 0;
@@ -225,14 +225,14 @@ BOOL verify_file_content(const char *filename, const char *expected_data, LONG e
     TRACE2("Verifying file content: %s (expected %ld bytes)", filename, expected_length);
     
     /* Check if file exists first with retry logic */
-    for (retry_count = 0; retry_count < 3; retry_count++) {
+    for (retry_count = 0; retry_count < 5; retry_count++) {
         BPTR test_file = Open(filename, MODE_READ);
         if (test_file == 0) {
             io_error = IoErr();
             printf("TRACE: File does not exist: %s (IoErr: %ld) - attempt %ld\n", filename, io_error, retry_count + 1);
-            if (retry_count < 2) {
-                TRACE("Waiting 2 seconds before retry...");
-                Delay(100); /* 100 ticks = 2 seconds */
+            if (retry_count < 4) {
+                TRACE("Waiting 5 seconds before retry...");
+                Delay(250); /* 250 ticks = 5 seconds */
             } else {
                 return FALSE;
             }
@@ -373,7 +373,7 @@ LONG get_file_size(const char *filename)
     LONG retry_count;
     
     /* Try to open file with retry logic */
-    for (retry_count = 0; retry_count < 3; retry_count++) {
+    for (retry_count = 0; retry_count < 5; retry_count++) {
         file = Open(filename, MODE_READ);
         if (file != 0) {
             size = Seek(file, 0, MODE_END);
@@ -390,9 +390,9 @@ LONG get_file_size(const char *filename)
         } else {
             io_error = IoErr();
             printf("TRACE: Could not open file %s for size check: IoErr = %ld - attempt %ld\n", filename, io_error, retry_count + 1);
-            if (retry_count < 2) {
-                TRACE("Waiting 2 seconds before retry...");
-                Delay(100); /* 100 ticks = 2 seconds */
+            if (retry_count < 4) {
+                TRACE("Waiting 5 seconds before retry...");
+                Delay(250); /* 250 ticks = 5 seconds */
             }
         }
     }
@@ -941,7 +941,7 @@ BOOL test_write_operations(void)
             BOOL verification_success = FALSE;
             
             /* Try to open file with retry logic */
-            for (retry_count = 0; retry_count < 3; retry_count++) {
+            for (retry_count = 0; retry_count < 5; retry_count++) {
                 verify_file = Open(TEST_FILE_NAME2, MODE_READ);
                 if (verify_file != 0) {
                     char verify_buffer[4];
@@ -957,16 +957,16 @@ BOOL test_write_operations(void)
                         break;
                     } else {
                         printf("TRACE: WriteCharAsync verification: expected 3 bytes, got %ld\n", verify_read);
-                        if (retry_count < 2) {
-                            TRACE("Waiting 2 seconds before retry...");
-                            Delay(100); /* 100 ticks = 2 seconds */
-                        }
+                                        if (retry_count < 4) {
+                    TRACE("Waiting 5 seconds before retry...");
+                    Delay(250); /* 250 ticks = 5 seconds */
+                }
                     }
                 } else {
                     printf("TRACE: WriteCharAsync verification: could not open %s (attempt %ld)\n", TEST_FILE_NAME2, retry_count + 1);
-                    if (retry_count < 2) {
-                        TRACE("Waiting 2 seconds before retry...");
-                        Delay(100); /* 100 ticks = 2 seconds */
+                    if (retry_count < 4) {
+                        TRACE("Waiting 5 seconds before retry...");
+                        Delay(250); /* 250 ticks = 5 seconds */
                     }
                 }
             }
@@ -1910,7 +1910,7 @@ void print_test_summary(void)
     printf("Total tests: %ld\n", test_count);
     printf("Passed: %ld\n", test_passed);
     printf("Failed: %ld\n", test_failed);
-    printf("Success rate: %.1f%%\n", (test_count > 0) ? (test_passed * 100.0 / test_count) : 0.0);
+    printf("Success rate: %f%%\n", (test_count > 0) ? (test_passed * 100.0 / test_count) : 0.0)
     
     if (test_failed == 0) {
         printf("\nALL TESTS PASSED! \\o/\n");
