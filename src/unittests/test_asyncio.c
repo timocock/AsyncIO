@@ -694,7 +694,7 @@ BOOL test_basic_file_read(void)
                     if (line_len != expected_line_len || 
                         memcmp(line_start, expected_lines[line_num], line_len) != 0) {
                         TRACE2("Line %ld mismatch: expected '%s'", line_num + 1, expected_lines[line_num]);
-                        TRACE2("Line %ld mismatch: got '%.*s'", line_num + 1, (int)line_len, line_start);
+                        printf("TRACE: Line %ld mismatch: got '%.*s'\n", line_num + 1, (int)line_len, line_start);
                         content_matches = FALSE;
                         break;
                     }
