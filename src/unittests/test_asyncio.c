@@ -24,14 +24,22 @@ struct Library *AsyncIOBase;
 #define TEST_FILE_NAME2 "T:asyncio_test2.dat"
 #define MAX_LINE_LENGTH 256
 
-/* Test data - Latin-1 only, short lines */
+/* Test data - Diverse content with Latin-1 characters */
 static const char *test_strings[] = {
-    "Line 1: Hello World\n",
-    "Line 2: Test data\n",
-    "Line 3: Short line\n",
-    "Line 4: Numbers 12345\n",
-    "Line 5: Special chars !@#\n",
-    "Line 6: End of file\n",
+    "The quick brown fox jumps over the lazy dog\n",
+    "Pack my box with five dozen liquor jugs\n",
+    "How vexingly quick daft zebras jump!\n",
+    "The five boxing wizards jump quickly\n",
+    "Sphinx of black quartz, judge my vow\n",
+    "Amazingly few discotheques provide jukeboxes\n",
+    "Special characters: éèêëàáâäùúûüçñÿœæ\n",
+    "Numbers and symbols: 12345 67890 !@#$%^&*() _+-=[]{}|;':\",./<>?\n",
+    "Mixed content: ABC123!@# 456DEF789\n",
+    "Empty line follows:\n",
+    "\n",
+    "Line after empty line\n",
+    "Very long line that might span multiple buffers or require multiple async operations to complete properly in the double-buffered system\n",
+    "Final line with end-of-file marker\n",
     NULL
 };
 
@@ -517,7 +525,7 @@ BOOL test_write_operations(void)
 {
     struct AsyncFile *file;
     LONG result;
-    const char *test_data = "Test write data\n";
+    const char *test_data = "The quick brown fox jumps over the lazy dog\n";
     LONG data_len = strlen(test_data);
 
     TEST_START("WriteAsync - Write data to file");
@@ -557,19 +565,19 @@ BOOL test_write_operations(void)
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
     if (file) {
-        TRACE("Writing character 'A'");
-        result = WriteCharAsync(file, 'A');
-        TRACE_CHAR_WRITE(file, 'A', result);
+        TRACE("Writing character 'X'");
+        result = WriteCharAsync(file, 'X');
+        TRACE_CHAR_WRITE(file, 'X', result);
         TEST_ASSERT(result == 1, "WriteCharAsync should write one byte");
         
-        TRACE("Writing character 'B'");
-        result = WriteCharAsync(file, 'B');
-        TRACE_CHAR_WRITE(file, 'B', result);
+        TRACE("Writing character 'Y'");
+        result = WriteCharAsync(file, 'Y');
+        TRACE_CHAR_WRITE(file, 'Y', result);
         TEST_ASSERT(result == 1, "WriteCharAsync should write one byte");
         
-        TRACE("Writing character 'C'");
-        result = WriteCharAsync(file, 'C');
-        TRACE_CHAR_WRITE(file, 'C', result);
+        TRACE("Writing character 'Z'");
+        result = WriteCharAsync(file, 'Z');
+        TRACE_CHAR_WRITE(file, 'Z', result);
         TEST_ASSERT(result == 1, "WriteCharAsync should write one byte");
         
         TRACE1("Closing file handle %p", file);
@@ -602,7 +610,7 @@ BOOL test_read_operations(void)
     if (file) {
         TRACE1("Reading up to %ld bytes into buffer", sizeof(buffer) - 1);
         result = ReadAsync(file, buffer, sizeof(buffer) - 1);
-        TRACE_READ_VALIDATE(file, buffer, sizeof(buffer) - 1, result, "Test write data\n", 16);
+        TRACE_READ_VALIDATE(file, buffer, sizeof(buffer) - 1, result, "The quick brown fox jumps over the lazy dog\n", 44);
         TEST_ASSERT(result > 0, "ReadAsync should read some data");
         
         buffer[result] = '\0';
@@ -674,7 +682,7 @@ BOOL test_seek_operations(void)
         TEST_ASSERT(result >= 0, "SeekAsync should succeed");
         
         result = ReadAsync(file, buffer, 5);
-        TRACE_READ_VALIDATE(file, buffer, 5, result, "Test ", 5);
+        TRACE_READ_VALIDATE(file, buffer, 5, result, "The q", 5);
         TEST_ASSERT(result == 5, "ReadAsync should read 5 bytes after seek");
         
         result = CloseAsync(file);
@@ -694,7 +702,7 @@ BOOL test_seek_operations(void)
         TEST_ASSERT(result >= 0, "SeekAsync should succeed");
         
         result = ReadAsync(file, buffer, 5);
-        TRACE_READ_VALIDATE(file, buffer, 5, result, "write", 5);
+        TRACE_READ_VALIDATE(file, buffer, 5, result, "uick ", 5);
         TEST_ASSERT(result == 5, "ReadAsync should read 5 bytes after seek");
         
         result = CloseAsync(file);

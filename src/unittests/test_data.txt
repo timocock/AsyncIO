@@ -1,11 +1,23 @@
-Line 1: Hello World - Basic ASCII text
-Line 2: Test data with numbers 12345 and symbols !@#$%^&*()
-Line 3: Short line
-Line 4: Longer line with more content to test buffer boundaries and async operations
-Line 5: Special characters: éèêëàáâäùúûüçñÿœæ
-Line 6: Mixed content: ABC123!@# 456DEF789
-Line 7: Empty line follows:
+Line 1: The quick brown fox jumps over the lazy dog
+Line 2: Pack my box with five dozen liquor jugs
+Line 3: How vexingly quick daft zebras jump!
+Line 4: The five boxing wizards jump quickly
+Line 5: Sphinx of black quartz, judge my vow
+Line 6: Amazingly few discotheques provide jukeboxes
+Line 7: The quick onyx goblin jumps over the lazy dwarf
+Line 8: Pack my red box with five dozen quality jugs
+Line 9: How quickly daft jumping zebras vex!
+Line 10: Sphinx of black quartz, judge my vow
+Line 11: The five boxing wizards jump quickly
+Line 12: Amazingly few discotheques provide jukeboxes
+Line 13: Pack my box with five dozen liquor jugs
+Line 14: How vexingly quick daft zebras jump!
+Line 15: The quick brown fox jumps over the lazy dog
+Line 16: Special characters: éèêëàáâäùúûüçñÿœæ
+Line 17: Numbers and symbols: 12345 67890 !@#$%^&*() _+-=[]{}|;':",./<>?
+Line 18: Mixed content: ABC123!@# 456DEF789
+Line 19: Empty line follows:
 
-Line 8: Line after empty line
-Line 9: Very long line that might span multiple buffers or require multiple async operations to complete properly in the double-buffered system
-Line 10: Final line with end-of-file marker 
+Line 20: Line after empty line
+Line 21: Very long line that might span multiple buffers or require multiple async operations to complete properly in the double-buffered system
+Line 22: Final line with end-of-file marker 
