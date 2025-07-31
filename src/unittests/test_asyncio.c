@@ -424,11 +424,11 @@ BOOL check_t_volume_available(void)
             return TRUE;
         } else {
             io_error = IoErr();
-            TRACE2("T: volume read test failed: IoErr = %ld", io_error);
+            printf("TRACE: T: volume read test failed: IoErr = %ld\n", io_error);
         }
     } else {
         io_error = IoErr();
-        TRACE2("T: volume write test failed: IoErr = %ld", io_error);
+        printf("TRACE: T: volume write test failed: IoErr = %ld\n", io_error);
     }
     
     TRACE("T: volume is not available or not writable");
