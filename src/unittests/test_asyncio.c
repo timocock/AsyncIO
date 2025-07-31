@@ -39,7 +39,7 @@ static const char *test_strings[] = {
 static const char *test_binary_data = "Binary test data";
 
 /* AsyncIO-specific test configuration */
-#define ASYNC_WAIT_TIME 100000  /* Microseconds to wait for async operations */
+#define ASYNC_WAIT_TICKS 5      /* Ticks to wait for async operations (50 ticks = 1 second) */
 #define ASYNC_RETRY_COUNT 10    /* Number of retries for async operations */
 
 /* Global variables for test tracking */
@@ -173,8 +173,8 @@ void wait_for_async_operation(void)
 {
     TRACE("Waiting for async operation to complete");
     /* Give the file system time to complete background operations */
-    /* Note: Delay() takes ticks (50 per second), so convert microseconds to ticks */
-    Delay((ASYNC_WAIT_TIME * 50) / 1000000);
+    /* Delay() takes ticks (50 per second) */
+    Delay(ASYNC_WAIT_TICKS);
     TRACE("Async operation wait completed");
 }
 
