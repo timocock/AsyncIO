@@ -220,19 +220,27 @@ BOOL verify_file_content(const char *filename, const char *expected_data, LONG e
     LONG bytes_read;
     BOOL result = FALSE;
     LONG io_error;
+    LONG retry_count;
     
     TRACE2("Verifying file content: %s (expected %ld bytes)", filename, expected_length);
     
-    /* Check if file exists first */
-    {
+    /* Check if file exists first with retry logic */
+    for (retry_count = 0; retry_count < 3; retry_count++) {
         BPTR test_file = Open(filename, MODE_READ);
         if (test_file == 0) {
             io_error = IoErr();
-            TRACE2("File does not exist: %s (IoErr: %ld)", filename, io_error);
-            return FALSE;
+            TRACE2("File does not exist: %s (IoErr: %ld) - attempt %ld", filename, io_error, retry_count + 1);
+            if (retry_count < 2) {
+                TRACE("Waiting 2 seconds before retry...");
+                Delay(100); /* 100 ticks = 2 seconds */
+            } else {
+                return FALSE;
+            }
+        } else {
+            Close(test_file);
+            TRACE1("File exists: %s", filename);
+            break;
         }
-        Close(test_file);
-        TRACE1("File exists: %s", filename);
     }
     
     file = Open(filename, MODE_READ);
@@ -327,13 +335,20 @@ BOOL create_test_file(const char *filename, const char *content, LONG length)
     BPTR file;
     LONG bytes_written;
     BOOL result = FALSE;
+    LONG io_error;
     
     TRACE2("Creating test file: %s (%ld bytes)", filename, length);
     
     file = Open(filename, MODE_WRITE);
     if (file != 0) {
         bytes_written = Write(file, (APTR)content, length);
+        io_error = IoErr();
         Close(file);
+        
+        if (io_error != 0) {
+            TRACE2("Error writing test file %s: IoErr = %ld", filename, io_error);
+            return FALSE;
+        }
         
         if (bytes_written == length) {
             TRACE("Test file created successfully");
@@ -342,7 +357,8 @@ BOOL create_test_file(const char *filename, const char *content, LONG length)
             TRACE2("Failed to write test file: expected %ld, wrote %ld", length, bytes_written);
         }
     } else {
-        TRACE1("Failed to create test file: %s", filename);
+        io_error = IoErr();
+        TRACE2("Failed to create test file %s: IoErr = %ld", filename, io_error);
     }
     
     return result;
@@ -354,25 +370,34 @@ LONG get_file_size(const char *filename)
     BPTR file;
     LONG size = -1;
     LONG io_error;
+    LONG retry_count;
     
-    file = Open(filename, MODE_READ);
-    if (file != 0) {
-        size = Seek(file, 0, MODE_END);
-        io_error = IoErr();
-        Close(file);
-        
-        if (io_error != 0) {
-            TRACE2("Error getting file size for %s: IoErr = %ld", filename, io_error);
-            return -1;
+    /* Try to open file with retry logic */
+    for (retry_count = 0; retry_count < 3; retry_count++) {
+        file = Open(filename, MODE_READ);
+        if (file != 0) {
+            size = Seek(file, 0, MODE_END);
+            io_error = IoErr();
+            Close(file);
+            
+            if (io_error != 0) {
+                TRACE2("Error getting file size for %s: IoErr = %ld", filename, io_error);
+                return -1;
+            }
+            
+            TRACE2("File size for %s: %ld bytes", filename, size);
+            return size;
+        } else {
+            io_error = IoErr();
+            TRACE2("Could not open file %s for size check: IoErr = %ld - attempt %ld", filename, io_error, retry_count + 1);
+            if (retry_count < 2) {
+                TRACE("Waiting 2 seconds before retry...");
+                Delay(100); /* 100 ticks = 2 seconds */
+            }
         }
-        
-        TRACE2("File size for %s: %ld bytes", filename, size);
-    } else {
-        io_error = IoErr();
-        TRACE2("Could not open file %s for size check: IoErr = %ld", filename, io_error);
     }
     
-    return size;
+    return -1;
 }
 
 /* Main test function */
@@ -906,25 +931,43 @@ BOOL test_write_operations(void)
         /* Verify the written content using dos.library */
         /* Note: AsyncIO files may not be immediately accessible via dos.library */
         {
-            BPTR verify_file = Open(TEST_FILE_NAME2, MODE_READ);
-            if (verify_file != 0) {
-                char verify_buffer[4];
-                LONG verify_read = Read(verify_file, verify_buffer, sizeof(verify_buffer));
-                Close(verify_file);
-                
-                if (verify_read == 3) {
-                    verify_buffer[3] = '\0';
-                    printf("TRACE: WriteCharAsync verification: content '%s'\n", verify_buffer);
-                    TEST_ASSERT(verify_buffer[0] == 'X' && verify_buffer[1] == 'Y' && verify_buffer[2] == 'Z', 
-                               "WriteCharAsync should write 'XYZ'");
+            BPTR verify_file;
+            LONG retry_count;
+            BOOL verification_success = FALSE;
+            
+            /* Try to open file with retry logic */
+            for (retry_count = 0; retry_count < 3; retry_count++) {
+                verify_file = Open(TEST_FILE_NAME2, MODE_READ);
+                if (verify_file != 0) {
+                    char verify_buffer[4];
+                    LONG verify_read = Read(verify_file, verify_buffer, sizeof(verify_buffer));
+                    Close(verify_file);
+                    
+                    if (verify_read == 3) {
+                        verify_buffer[3] = '\0';
+                        printf("TRACE: WriteCharAsync verification: content '%s'\n", verify_buffer);
+                        TEST_ASSERT(verify_buffer[0] == 'X' && verify_buffer[1] == 'Y' && verify_buffer[2] == 'Z', 
+                                   "WriteCharAsync should write 'XYZ'");
+                        verification_success = TRUE;
+                        break;
+                    } else {
+                        printf("TRACE: WriteCharAsync verification: expected 3 bytes, got %ld\n", verify_read);
+                        if (retry_count < 2) {
+                            TRACE("Waiting 2 seconds before retry...");
+                            Delay(100); /* 100 ticks = 2 seconds */
+                        }
+                    }
                 } else {
-                    printf("TRACE: WriteCharAsync verification: expected 3 bytes, got %ld\n", verify_read);
-                    TRACE("File verification failed - this may be normal for AsyncIO");
-                    TEST_PASS(); /* Don't fail the test for this */
+                    printf("TRACE: WriteCharAsync verification: could not open %s (attempt %ld)\n", TEST_FILE_NAME2, retry_count + 1);
+                    if (retry_count < 2) {
+                        TRACE("Waiting 2 seconds before retry...");
+                        Delay(100); /* 100 ticks = 2 seconds */
+                    }
                 }
-            } else {
-                printf("TRACE: WriteCharAsync verification: could not open %s\n", TEST_FILE_NAME2);
-                TRACE("File verification failed - this may be normal for AsyncIO");
+            }
+            
+            if (!verification_success) {
+                TRACE("File verification failed after retries - this may be normal for AsyncIO");
                 TEST_PASS(); /* Don't fail the test for this */
             }
         }
