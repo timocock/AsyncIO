@@ -1133,7 +1133,7 @@ BOOL test_line_operations(void)
     if (file) {
         /* Write multiple test strings */
         for (i = 0; test_strings[i] != NULL; i++) {
-            TRACE1("Writing line %d: '%s'", i + 1, test_strings[i]);
+            printf("TRACE: Writing line %d: '%s'\n", i + 1, test_strings[i]);
             result = WriteLineAsync(file, (STRPTR)test_strings[i]);
             TRACE2("WriteLineAsync result: %ld (expected %ld)", result, strlen(test_strings[i]));
             TEST_ASSERT(result == strlen(test_strings[i]), "WriteLineAsync should write all bytes of string");
