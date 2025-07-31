@@ -1638,6 +1638,7 @@ BOOL test_file_copy_validation(void)
     LONG mismatch_count = 0;
     char original_buffer[1024], copied_buffer[1024];
     LONG pos = 0;
+    const char *source_filename;
 
     TEST_START("File Copy Validation - Complete file integrity test");
     TRACE("Testing complete file copy with AsyncIO - read, write, verify cycle");
@@ -1662,7 +1663,7 @@ BOOL test_file_copy_validation(void)
     }
 
     /* Step 1: Read from source file using AsyncIO */
-    const char *source_filename = (original_size > 0) ? "test_data.txt" : "T:asyncio_copy_source.dat";
+    source_filename = (original_size > 0) ? "test_data.txt" : "T:asyncio_copy_source.dat";
     TRACE1("Step 1: Reading from source file (%s)", source_filename);
     src_file = OpenAsync((STRPTR)source_filename, MODE_READ, TEST_BUFFER_SIZE);
     TRACE_OPEN(src_file, source_filename, MODE_READ, TEST_BUFFER_SIZE);
