@@ -363,74 +363,157 @@ int main(int argc, char *argv[])
     test_passed = 0;
     test_failed = 0;
 
-    /* Run all test suites */
+    /* Run all test suites with proper dependency handling */
     TRACE("Starting test suite execution");
     
-    if (test_open_close()) {
+    /* Track test results for dependency checking */
+    BOOL open_close_passed = FALSE;
+    BOOL write_ops_passed = FALSE;
+    BOOL read_ops_passed = FALSE;
+    BOOL seek_ops_passed = FALSE;
+    BOOL peek_ops_passed = FALSE;
+    BOOL line_ops_passed = FALSE;
+    BOOL char_ops_passed = FALSE;
+    BOOL error_handling_passed = FALSE;
+    BOOL file_handle_ops_passed = FALSE;
+    BOOL sophisticated_files_passed = FALSE;
+    BOOL file_copy_validation_passed = FALSE;
+    
+    /* Test 1: Open/Close operations (independent) */
+    TRACE("=== Starting Test 1: Open/Close operations ===");
+    open_close_passed = test_open_close();
+    if (open_close_passed) {
         printf("Open/Close tests completed\n");
     } else {
         TRACE("Open/Close tests failed");
     }
+    TRACE("=== Test 1 completed ===");
+    wait_for_async_operation(); /* Ensure cleanup between tests */
     
-    if (test_write_operations()) {
+    /* Test 2: Write operations (independent) */
+    TRACE("=== Starting Test 2: Write operations ===");
+    write_ops_passed = test_write_operations();
+    if (write_ops_passed) {
         printf("Write operation tests completed\n");
     } else {
         TRACE("Write operation tests failed");
     }
+    TRACE("=== Test 2 completed ===");
+    wait_for_async_operation(); /* Ensure cleanup between tests */
     
-    if (test_read_operations()) {
-        printf("Read operation tests completed\n");
+    /* Test 3: Read operations (depends on write operations for test data) */
+    if (write_ops_passed) {
+        TRACE("=== Starting Test 3: Read operations ===");
+        read_ops_passed = test_read_operations();
+        if (read_ops_passed) {
+            printf("Read operation tests completed\n");
+        } else {
+            TRACE("Read operation tests failed");
+        }
+        TRACE("=== Test 3 completed ===");
+        wait_for_async_operation(); /* Ensure cleanup between tests */
     } else {
-        TRACE("Read operation tests failed");
+        printf("Skipping read operations test (depends on write operations)\n");
+        TRACE("Read operations test skipped due to write operations failure");
     }
     
-    if (test_seek_operations()) {
-        printf("Seek operation tests completed\n");
+    /* Test 4: Seek operations (depends on read operations for test data) */
+    if (read_ops_passed) {
+        TRACE("=== Starting Test 4: Seek operations ===");
+        seek_ops_passed = test_seek_operations();
+        if (seek_ops_passed) {
+            printf("Seek operation tests completed\n");
+        } else {
+            TRACE("Seek operation tests failed");
+        }
+        TRACE("=== Test 4 completed ===");
+        wait_for_async_operation(); /* Ensure cleanup between tests */
     } else {
-        TRACE("Seek operation tests failed");
+        printf("Skipping seek operations test (depends on read operations)\n");
+        TRACE("Seek operations test skipped due to read operations failure");
     }
     
-    if (test_peek_operations()) {
-        printf("Peek operation tests completed\n");
+    /* Test 5: Peek operations (depends on seek operations for test data) */
+    if (seek_ops_passed) {
+        TRACE("=== Starting Test 5: Peek operations ===");
+        peek_ops_passed = test_peek_operations();
+        if (peek_ops_passed) {
+            printf("Peek operation tests completed\n");
+        } else {
+            TRACE("Peek operation tests failed");
+        }
+        TRACE("=== Test 5 completed ===");
+        wait_for_async_operation(); /* Ensure cleanup between tests */
     } else {
-        TRACE("Peek operation tests failed");
+        printf("Skipping peek operations test (depends on seek operations)\n");
+        TRACE("Peek operations test skipped due to seek operations failure");
     }
     
-    if (test_line_operations()) {
+    /* Test 6: Line operations (independent - creates its own test data) */
+    TRACE("=== Starting Test 6: Line operations ===");
+    line_ops_passed = test_line_operations();
+    if (line_ops_passed) {
         printf("Line operation tests completed\n");
     } else {
         TRACE("Line operation tests failed");
     }
+    TRACE("=== Test 6 completed ===");
+    wait_for_async_operation(); /* Ensure cleanup between tests */
     
-    if (test_char_operations()) {
+    /* Test 7: Character operations (independent - creates its own test data) */
+    TRACE("=== Starting Test 7: Character operations ===");
+    char_ops_passed = test_char_operations();
+    if (char_ops_passed) {
         printf("Character operation tests completed\n");
     } else {
         TRACE("Character operation tests failed");
     }
+    TRACE("=== Test 7 completed ===");
+    wait_for_async_operation(); /* Ensure cleanup between tests */
     
-    if (test_error_handling()) {
+    /* Test 8: Error handling (independent) */
+    TRACE("=== Starting Test 8: Error handling ===");
+    error_handling_passed = test_error_handling();
+    if (error_handling_passed) {
         printf("Error handling tests completed\n");
     } else {
         TRACE("Error handling tests failed");
     }
+    TRACE("=== Test 8 completed ===");
+    wait_for_async_operation(); /* Ensure cleanup between tests */
     
-    if (test_file_handle_operations()) {
+    /* Test 9: File handle operations (independent) */
+    TRACE("=== Starting Test 9: File handle operations ===");
+    file_handle_ops_passed = test_file_handle_operations();
+    if (file_handle_ops_passed) {
         printf("File handle operation tests completed\n");
     } else {
         TRACE("File handle operation tests failed");
     }
+    TRACE("=== Test 9 completed ===");
+    wait_for_async_operation(); /* Ensure cleanup between tests */
     
-    if (test_sophisticated_files()) {
+    /* Test 10: Sophisticated files (independent - uses external test files) */
+    TRACE("=== Starting Test 10: Sophisticated files ===");
+    sophisticated_files_passed = test_sophisticated_files();
+    if (sophisticated_files_passed) {
         printf("Sophisticated file tests completed\n");
     } else {
         TRACE("Sophisticated file tests failed");
     }
+    TRACE("=== Test 10 completed ===");
+    wait_for_async_operation(); /* Ensure cleanup between tests */
     
-    if (test_file_copy_validation()) {
+    /* Test 11: File copy validation (independent - uses external test files) */
+    TRACE("=== Starting Test 11: File copy validation ===");
+    file_copy_validation_passed = test_file_copy_validation();
+    if (file_copy_validation_passed) {
         printf("File copy validation tests completed\n");
     } else {
         TRACE("File copy validation tests failed");
     }
+    TRACE("=== Test 11 completed ===");
+    wait_for_async_operation(); /* Ensure cleanup between tests */
 
     /* Cleanup and summary */
     TRACE("Starting cleanup phase");
