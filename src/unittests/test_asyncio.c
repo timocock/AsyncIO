@@ -344,6 +344,19 @@ LONG get_file_size(const char *filename)
 /* Main test function */
 int main(int argc, char *argv[])
 {
+    /* All variable declarations must be at the start of the function */
+    BOOL open_close_passed;
+    BOOL write_ops_passed;
+    BOOL read_ops_passed;
+    BOOL seek_ops_passed;
+    BOOL peek_ops_passed;
+    BOOL line_ops_passed;
+    BOOL char_ops_passed;
+    BOOL error_handling_passed;
+    BOOL file_handle_ops_passed;
+    BOOL sophisticated_files_passed;
+    BOOL file_copy_validation_passed;
+    
     printf("=== AsyncIO Library Unit Test Suite ===\n");
     printf("Testing all functions from asyncio.doc\n\n");
 
@@ -365,19 +378,6 @@ int main(int argc, char *argv[])
 
     /* Run all test suites with proper dependency handling */
     TRACE("Starting test suite execution");
-    
-    /* Track test results for dependency checking */
-    BOOL open_close_passed;
-    BOOL write_ops_passed;
-    BOOL read_ops_passed;
-    BOOL seek_ops_passed;
-    BOOL peek_ops_passed;
-    BOOL line_ops_passed;
-    BOOL char_ops_passed;
-    BOOL error_handling_passed;
-    BOOL file_handle_ops_passed;
-    BOOL sophisticated_files_passed;
-    BOOL file_copy_validation_passed;
     
     /* Initialize all test results to FALSE */
     open_close_passed = FALSE;
@@ -1389,7 +1389,7 @@ BOOL test_file_copy_validation(void)
             if (memcmp(original_buffer, copied_buffer, orig_read) != 0) {
                 data_matches = FALSE;
                 mismatch_count++;
-                TRACE2("DATA MISMATCH at position %ld! Original vs Copy comparison failed", pos);
+                TRACE1("DATA MISMATCH at position %ld! Original vs Copy comparison failed", pos);
                 
                 /* Show first few bytes of mismatch */
                 if (orig_read > 0) {
