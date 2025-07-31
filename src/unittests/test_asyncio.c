@@ -605,7 +605,7 @@ BOOL test_basic_file_read(void)
         "\n",
         "Line 20: Line after empty line\n",
         "Line 21: Very long line that might span multiple buffers or require multiple async operations to complete properly in the double-buffered system\n",
-        "Line 22: Final line with end-of-file marker \n",
+        "Line 22: Final line with end-of-file marker ",
         NULL
     };
 
