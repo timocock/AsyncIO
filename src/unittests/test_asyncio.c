@@ -15,6 +15,7 @@
 #include <proto/asyncio.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 struct Library *AsyncIOBase;
 
@@ -614,7 +615,7 @@ BOOL test_basic_file_read(void)
     TRACE1("Expected file size: %ld bytes", expected_size);
     
     /* Open the test file */
-    file = OpenAsync("test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)"test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, "test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed for test_data.txt");
     
@@ -638,7 +639,7 @@ BOOL test_basic_file_read(void)
     TEST_ASSERT(result >= 0, "CloseAsync should succeed");
     
     /* Reopen and read for content validation */
-    file = OpenAsync("test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)"test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, "test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed for content validation");
     
@@ -1189,7 +1190,7 @@ BOOL test_error_handling(void)
     char buffer[10];
 
     TEST_START("Error handling - Open non-existent file for reading");
-    file = OpenAsync("NONEXISTENT_FILE", MODE_READ, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)"NONEXISTENT_FILE", MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file == NULL, "OpenAsync should return NULL for non-existent file");
     if (file == NULL) {
         printf("    IoErr: %ld", IoErr());
@@ -1221,7 +1222,7 @@ BOOL test_error_handling(void)
     TEST_ASSERT(file != NULL, "OpenAsync should succeed");
     
     if (file) {
-        result = WriteAsync(file, "test", 4);
+        result = WriteAsync(file, (APTR)"test", 4);
         TEST_ASSERT(result == -1, "WriteAsync should fail on read-only file");
         
         result = CloseAsync(file);
@@ -1292,7 +1293,7 @@ BOOL test_sophisticated_files(void)
 
     TEST_START("Sophisticated file operations - Read from test_data.txt");
     TRACE("Opening sophisticated test file: test_data.txt");
-    file = OpenAsync("test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)"test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, "test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed for test_data.txt");
     
@@ -1321,7 +1322,7 @@ BOOL test_sophisticated_files(void)
 
     TEST_START("Sophisticated file operations - Write to new file");
     TRACE("Creating new file with sophisticated content");
-    file = OpenAsync("T:asyncio_sophisticated.dat", MODE_WRITE, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)"T:asyncio_sophisticated.dat", MODE_WRITE, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, "T:asyncio_sophisticated.dat", MODE_WRITE, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed for writing");
     
@@ -1360,7 +1361,7 @@ BOOL test_sophisticated_files(void)
 
     TEST_START("Sophisticated file operations - Large file handling");
     TRACE("Testing large file operations");
-    file = OpenAsync("test_large.txt", MODE_READ, TEST_BUFFER_SIZE);
+    file = OpenAsync((STRPTR)"test_large.txt", MODE_READ, TEST_BUFFER_SIZE);
     TRACE_OPEN(file, "test_large.txt", MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(file != NULL, "OpenAsync should succeed for large file");
     
@@ -1424,7 +1425,7 @@ BOOL test_file_copy_validation(void)
 
     /* Step 1: Read from source file using AsyncIO */
     TRACE("Step 1: Reading from source file (test_data.txt)");
-    src_file = OpenAsync("test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
+    src_file = OpenAsync((STRPTR)"test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
     TRACE_OPEN(src_file, "test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(src_file != NULL, "OpenAsync should succeed for source file");
     
@@ -1434,7 +1435,7 @@ BOOL test_file_copy_validation(void)
 
     /* Step 2: Write to destination file using AsyncIO */
     TRACE("Step 2: Writing to destination file (T:asyncio_copy_test.dat)");
-    dst_file = OpenAsync("T:asyncio_copy_test.dat", MODE_WRITE, TEST_BUFFER_SIZE);
+    dst_file = OpenAsync((STRPTR)"T:asyncio_copy_test.dat", MODE_WRITE, TEST_BUFFER_SIZE);
     TRACE_OPEN(dst_file, "T:asyncio_copy_test.dat", MODE_WRITE, TEST_BUFFER_SIZE);
     TEST_ASSERT(dst_file != NULL, "OpenAsync should succeed for destination file");
     
@@ -1479,7 +1480,7 @@ BOOL test_file_copy_validation(void)
 
     /* Step 5: Read back copied file and compare with original */
     TRACE("Step 5: Reading back copied file for byte-by-byte comparison");
-    verify_file = OpenAsync("T:asyncio_copy_test.dat", MODE_READ, TEST_BUFFER_SIZE);
+    verify_file = OpenAsync((STRPTR)"T:asyncio_copy_test.dat", MODE_READ, TEST_BUFFER_SIZE);
     TRACE_OPEN(verify_file, "T:asyncio_copy_test.dat", MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(verify_file != NULL, "OpenAsync should succeed for verification file");
     
@@ -1488,7 +1489,7 @@ BOOL test_file_copy_validation(void)
     }
 
     /* Reopen original file for comparison */
-    src_file = OpenAsync("test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
+    src_file = OpenAsync((STRPTR)"test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
     TRACE_OPEN(src_file, "test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
     TEST_ASSERT(src_file != NULL, "OpenAsync should succeed for original file comparison");
     
@@ -1562,8 +1563,8 @@ BOOL test_file_copy_validation(void)
     
     if (original_size > 0) {
         /* Copy binary file */
-        src_file = OpenAsync("test_binary.dat", MODE_READ, TEST_BUFFER_SIZE);
-        dst_file = OpenAsync("T:asyncio_binary_copy.dat", MODE_WRITE, TEST_BUFFER_SIZE);
+        src_file = OpenAsync((STRPTR)"test_binary.dat", MODE_READ, TEST_BUFFER_SIZE);
+        dst_file = OpenAsync((STRPTR)"T:asyncio_binary_copy.dat", MODE_WRITE, TEST_BUFFER_SIZE);
         
         if (src_file && dst_file) {
             total_read = 0;
@@ -1660,5 +1661,4 @@ void print_test_summary(void)
     } else {
         printf("\nSOME TESTS FAILED! :(\n");
     }
-} 
-} 
+}
