@@ -187,6 +187,7 @@ BOOL test_char_operations(void);
 BOOL test_error_handling(void);
 BOOL test_file_handle_operations(void);
 BOOL test_sophisticated_files(void);
+BOOL test_file_copy_validation(void);
 void cleanup_test_files(void);
 void print_test_summary(void);
 
@@ -423,6 +424,12 @@ int main(int argc, char *argv[])
         printf("Sophisticated file tests completed\n");
     } else {
         TRACE("Sophisticated file tests failed");
+    }
+    
+    if (test_file_copy_validation()) {
+        printf("File copy validation tests completed\n");
+    } else {
+        TRACE("File copy validation tests failed");
     }
 
     /* Cleanup and summary */
@@ -1164,6 +1171,204 @@ BOOL test_sophisticated_files(void)
     return TRUE;
 }
 
+/* Test file copy validation - read from source, write to destination, read back and verify */
+BOOL test_file_copy_validation(void)
+{
+    struct AsyncFile *src_file, *dst_file, *verify_file;
+    LONG result;
+    char buffer[1024];
+    LONG bytes_read, total_read = 0, total_written = 0;
+    LONG original_size, copied_size, verified_size;
+    BOOL data_matches = TRUE;
+    LONG mismatch_count = 0;
+    char original_buffer[1024], copied_buffer[1024];
+    LONG pos = 0;
+
+    TEST_START("File Copy Validation - Complete file integrity test");
+    TRACE("Testing complete file copy with AsyncIO - read, write, verify cycle");
+    
+    /* Get original file size */
+    original_size = get_file_size("test_data.txt");
+    TRACE1("Original file size: %ld bytes", original_size);
+    TEST_ASSERT(original_size > 0, "Source file should exist and have content");
+    
+    if (original_size <= 0) {
+        return FALSE;
+    }
+
+    /* Step 1: Read from source file using AsyncIO */
+    TRACE("Step 1: Reading from source file (test_data.txt)");
+    src_file = OpenAsync("test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
+    TRACE_OPEN(src_file, "test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
+    TEST_ASSERT(src_file != NULL, "OpenAsync should succeed for source file");
+    
+    if (!src_file) {
+        return FALSE;
+    }
+
+    /* Step 2: Write to destination file using AsyncIO */
+    TRACE("Step 2: Writing to destination file (T:asyncio_copy_test.dat)");
+    dst_file = OpenAsync("T:asyncio_copy_test.dat", MODE_WRITE, TEST_BUFFER_SIZE);
+    TRACE_OPEN(dst_file, "T:asyncio_copy_test.dat", MODE_WRITE, TEST_BUFFER_SIZE);
+    TEST_ASSERT(dst_file != NULL, "OpenAsync should succeed for destination file");
+    
+    if (!dst_file) {
+        CloseAsync(src_file);
+        return FALSE;
+    }
+
+    /* Step 3: Copy data in chunks */
+    TRACE("Step 3: Copying data in chunks");
+    while ((bytes_read = ReadAsync(src_file, buffer, sizeof(buffer))) > 0) {
+        TRACE2("Read chunk: %ld bytes at position %ld", bytes_read, total_read);
+        
+        result = WriteAsync(dst_file, buffer, bytes_read);
+        TRACE2("Wrote chunk: %ld bytes (expected %ld)", result, bytes_read);
+        TEST_ASSERT(result == bytes_read, "WriteAsync should write all bytes");
+        
+        total_read += bytes_read;
+        total_written += result;
+    }
+    
+    TRACE2("Copy completed: %ld bytes read, %ld bytes written", total_read, total_written);
+    TEST_ASSERT(total_read == original_size, "Should read entire source file");
+    TEST_ASSERT(total_written == original_size, "Should write entire destination file");
+
+    /* Close source and destination files */
+    result = CloseAsync(src_file);
+    TRACE_CLOSE(src_file, result);
+    TEST_ASSERT(result >= 0, "CloseAsync should succeed for source file");
+    
+    result = CloseAsync(dst_file);
+    TRACE_CLOSE(dst_file, result);
+    TEST_ASSERT(result >= 0, "CloseAsync should succeed for destination file");
+    
+    /* Wait for async operations to complete */
+    wait_for_async_operation();
+    
+    /* Step 4: Verify copied file size */
+    copied_size = get_file_size("T:asyncio_copy_test.dat");
+    TRACE2("File size verification: original=%ld, copied=%ld", original_size, copied_size);
+    TEST_ASSERT(copied_size == original_size, "Copied file should have same size as original");
+
+    /* Step 5: Read back copied file and compare with original */
+    TRACE("Step 5: Reading back copied file for byte-by-byte comparison");
+    verify_file = OpenAsync("T:asyncio_copy_test.dat", MODE_READ, TEST_BUFFER_SIZE);
+    TRACE_OPEN(verify_file, "T:asyncio_copy_test.dat", MODE_READ, TEST_BUFFER_SIZE);
+    TEST_ASSERT(verify_file != NULL, "OpenAsync should succeed for verification file");
+    
+    if (!verify_file) {
+        return FALSE;
+    }
+
+    /* Reopen original file for comparison */
+    src_file = OpenAsync("test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
+    TRACE_OPEN(src_file, "test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
+    TEST_ASSERT(src_file != NULL, "OpenAsync should succeed for original file comparison");
+    
+    if (!src_file) {
+        CloseAsync(verify_file);
+        return FALSE;
+    }
+
+    /* Byte-by-byte comparison */
+    TRACE("Step 6: Performing byte-by-byte comparison");
+    while (pos < original_size) {
+        LONG orig_read, copy_read;
+        LONG compare_size = (original_size - pos < sizeof(original_buffer)) ? 
+                           (original_size - pos) : sizeof(original_buffer);
+        
+        /* Read from original file */
+        orig_read = ReadAsync(src_file, original_buffer, compare_size);
+        TRACE2("Read from original: %ld bytes at position %ld", orig_read, pos);
+        
+        /* Read from copied file */
+        copy_read = ReadAsync(verify_file, copied_buffer, compare_size);
+        TRACE2("Read from copy: %ld bytes at position %ld", copy_read, pos);
+        
+        TEST_ASSERT(orig_read == copy_read, "Should read same amount from both files");
+        
+        if (orig_read > 0) {
+            /* Compare the data */
+            if (memcmp(original_buffer, copied_buffer, orig_read) != 0) {
+                data_matches = FALSE;
+                mismatch_count++;
+                TRACE3("DATA MISMATCH at position %ld! Original vs Copy comparison failed", pos);
+                
+                /* Show first few bytes of mismatch */
+                if (orig_read > 0) {
+                    printf("TRACE: Original: ");
+                    for (int i = 0; i < (orig_read > 16 ? 16 : orig_read); i++) {
+                        printf("%02X ", (unsigned char)original_buffer[i]);
+                    }
+                    printf("\nTRACE: Copy:     ");
+                    for (int i = 0; i < (orig_read > 16 ? 16 : orig_read); i++) {
+                        printf("%02X ", (unsigned char)copied_buffer[i]);
+                    }
+                    printf("\n");
+                }
+            } else {
+                TRACE2("Data matches at position %ld (%ld bytes)", pos, orig_read);
+            }
+        }
+        
+        pos += orig_read;
+    }
+    
+    TRACE2("Comparison completed: %ld bytes compared, %ld mismatches found", pos, mismatch_count);
+    TEST_ASSERT(data_matches, "All data should match between original and copied file");
+
+    /* Close verification files */
+    result = CloseAsync(verify_file);
+    TRACE_CLOSE(verify_file, result);
+    TEST_ASSERT(result >= 0, "CloseAsync should succeed for verification file");
+    
+    result = CloseAsync(src_file);
+    TRACE_CLOSE(src_file, result);
+    TEST_ASSERT(result >= 0, "CloseAsync should succeed for original file");
+
+    /* Step 7: Test with binary file */
+    TRACE("Step 7: Testing binary file copy validation");
+    original_size = get_file_size("test_binary.dat");
+    TRACE1("Binary file size: %ld bytes", original_size);
+    TEST_ASSERT(original_size > 0, "Binary file should exist and have content");
+    
+    if (original_size > 0) {
+        /* Copy binary file */
+        src_file = OpenAsync("test_binary.dat", MODE_READ, TEST_BUFFER_SIZE);
+        dst_file = OpenAsync("T:asyncio_binary_copy.dat", MODE_WRITE, TEST_BUFFER_SIZE);
+        
+        if (src_file && dst_file) {
+            total_read = 0;
+            total_written = 0;
+            
+            while ((bytes_read = ReadAsync(src_file, buffer, sizeof(buffer))) > 0) {
+                result = WriteAsync(dst_file, buffer, bytes_read);
+                TEST_ASSERT(result == bytes_read, "Binary file write should succeed");
+                total_read += bytes_read;
+                total_written += result;
+            }
+            
+            TRACE2("Binary copy completed: %ld bytes read, %ld bytes written", total_read, total_written);
+            
+            CloseAsync(src_file);
+            CloseAsync(dst_file);
+            wait_for_async_operation();
+            
+            /* Verify binary file copy */
+            copied_size = get_file_size("T:asyncio_binary_copy.dat");
+            TEST_ASSERT(copied_size == original_size, "Binary file copy should have same size");
+            
+            /* Use dos.library to verify binary content */
+            TEST_ASSERT(verify_file_content("T:asyncio_binary_copy.dat", NULL, original_size), 
+                       "Binary file content should match original");
+        }
+    }
+
+    TEST_PASS();
+    return TRUE;
+}
+
 /* Cleanup test files */
 void cleanup_test_files(void)
 {
@@ -1193,6 +1398,22 @@ void cleanup_test_files(void)
         TRACE("Successfully deleted T:asyncio_sophisticated.dat");
     } else {
         TRACE2("Failed to delete %s, IoErr: %ld", "T:asyncio_sophisticated.dat", IoErr());
+    }
+    
+    /* Clean up copy validation test files */
+    TRACE("Deleting copy validation test files");
+    if (DeleteFile("T:asyncio_copy_test.dat") == 0) {
+        printf("Deleted T:asyncio_copy_test.dat\n");
+        TRACE("Successfully deleted T:asyncio_copy_test.dat");
+    } else {
+        TRACE2("Failed to delete %s, IoErr: %ld", "T:asyncio_copy_test.dat", IoErr());
+    }
+    
+    if (DeleteFile("T:asyncio_binary_copy.dat") == 0) {
+        printf("Deleted T:asyncio_binary_copy.dat\n");
+        TRACE("Successfully deleted T:asyncio_binary_copy.dat");
+    } else {
+        TRACE2("Failed to delete %s, IoErr: %ld", "T:asyncio_binary_copy.dat", IoErr());
     }
     
     TRACE("File cleanup completed");
