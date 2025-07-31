@@ -177,6 +177,7 @@ static LONG test_failed = 0;
 }
 
 /* Function prototypes */
+BOOL test_basic_file_read(void);
 BOOL test_open_close(void);
 BOOL test_write_operations(void);
 BOOL test_read_operations(void);
@@ -392,19 +393,30 @@ int main(int argc, char *argv[])
     sophisticated_files_passed = FALSE;
     file_copy_validation_passed = FALSE;
     
-    /* Test 1: Open/Close operations (independent) */
-    TRACE("=== Starting Test 1: Open/Close operations ===");
-    open_close_passed = test_open_close();
+    /* Test 1: Basic file read validation (independent) */
+    TRACE("=== Starting Test 1: Basic file read validation ===");
+    open_close_passed = test_basic_file_read();
     if (open_close_passed) {
         printf("Open/Close tests completed\n");
     } else {
-        TRACE("Open/Close tests failed");
+        TRACE("Basic file read validation failed");
     }
     TRACE("=== Test 1 completed ===");
     wait_for_async_operation(); /* Ensure cleanup between tests */
     
-    /* Test 2: Write operations (independent) */
-    TRACE("=== Starting Test 2: Write operations ===");
+    /* Test 2: Open/Close operations (independent) */
+    TRACE("=== Starting Test 2: Open/Close operations ===");
+    write_ops_passed = test_open_close();
+    if (write_ops_passed) {
+        printf("Open/Close tests completed\n");
+    } else {
+        TRACE("Open/Close tests failed");
+    }
+    TRACE("=== Test 2 completed ===");
+    wait_for_async_operation(); /* Ensure cleanup between tests */
+    
+    /* Test 3: Write operations (independent) */
+    TRACE("=== Starting Test 3: Write operations ===");
     write_ops_passed = test_write_operations();
     if (write_ops_passed) {
         printf("Write operation tests completed\n");
@@ -557,6 +569,124 @@ int main(int argc, char *argv[])
         TRACE1("Some tests failed (%ld failures)", test_failed);
         return 1;
     }
+}
+
+/* Test basic file read validation against hardcoded data */
+BOOL test_basic_file_read(void)
+{
+    struct AsyncFile *file;
+    LONG result;
+    char buffer[1024];
+    LONG total_read = 0;
+    LONG expected_size;
+    
+    /* Hardcoded expected content from test_data.txt */
+    static const char *expected_content = 
+        "Line 1: The quick brown fox jumps over the lazy dog\n"
+        "Line 2: Pack my box with five dozen liquor jugs\n"
+        "Line 3: How vexingly quick daft zebras jump!\n"
+        "Line 4: The five boxing wizards jump quickly\n"
+        "Line 5: Sphinx of black quartz, judge my vow\n"
+        "Line 6: Amazingly few discotheques provide jukeboxes\n"
+        "Line 7: The quick onyx goblin jumps over the lazy dwarf\n"
+        "Line 8: Pack my red box with five dozen quality jugs\n"
+        "Line 9: How quickly daft jumping zebras vex!\n"
+        "Line 10: Sphinx of black quartz, judge my vow\n"
+        "Line 11: The five boxing wizards jump quickly\n"
+        "Line 12: Amazingly few discotheques provide jukeboxes\n"
+        "Line 13: Pack my box with five dozen liquor jugs\n"
+        "Line 14: How vexingly quick daft zebras jump!\n"
+        "Line 15: The quick brown fox jumps over the lazy dog\n"
+        "Line 16: Special characters: éèêëàáâäùúûüçñÿœæ\n"
+        "Line 17: Numbers and symbols: 12345 67890 !@#$%^&*() _+-=[]{}|;':\",./<>?\n"
+        "Line 18: Mixed content: ABC123!@# 456DEF789\n"
+        "Line 19: Empty line follows:\n"
+        "\n"
+        "Line 20: Line after empty line\n"
+        "Line 21: Very long line that might span multiple buffers or require multiple async operations to complete properly in the double-buffered system\n"
+        "Line 22: Final line with end-of-file marker \n";
+
+    TEST_START("Basic file read validation - Read test_data.txt and verify content");
+    TRACE("Testing basic file read functionality with test_data.txt");
+    
+    /* Get expected file size */
+    expected_size = strlen(expected_content);
+    TRACE1("Expected file size: %ld bytes", expected_size);
+    
+    /* Open the test file */
+    file = OpenAsync("test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
+    TRACE_OPEN(file, "test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed for test_data.txt");
+    
+    if (!file) {
+        return FALSE;
+    }
+    
+    /* Read the entire file in chunks */
+    TRACE("Reading file content in chunks");
+    while ((result = ReadAsync(file, buffer, sizeof(buffer))) > 0) {
+        TRACE2("Read chunk: %ld bytes (total: %ld)", result, total_read);
+        total_read += result;
+    }
+    
+    TRACE2("File read completed: %ld bytes read (expected %ld)", total_read, expected_size);
+    TEST_ASSERT(total_read == expected_size, "Should read entire file");
+    
+    /* Close the file */
+    result = CloseAsync(file);
+    TRACE_CLOSE(file, result);
+    TEST_ASSERT(result >= 0, "CloseAsync should succeed");
+    
+    /* Reopen and read for content validation */
+    file = OpenAsync("test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
+    TRACE_OPEN(file, "test_data.txt", MODE_READ, TEST_BUFFER_SIZE);
+    TEST_ASSERT(file != NULL, "OpenAsync should succeed for content validation");
+    
+    if (file) {
+        char *read_buffer;
+        LONG bytes_read;
+        
+        /* Allocate buffer for entire file content */
+        read_buffer = malloc(expected_size + 1);
+        TEST_ASSERT(read_buffer != NULL, "Should allocate memory for file content");
+        
+        if (read_buffer) {
+            /* Read entire file */
+            bytes_read = ReadAsync(file, read_buffer, expected_size);
+            TRACE2("Content validation read: %ld bytes (expected %ld)", bytes_read, expected_size);
+            TEST_ASSERT(bytes_read == expected_size, "Should read exact file size for validation");
+            
+            /* Null-terminate for string comparison */
+            read_buffer[bytes_read] = '\0';
+            
+            /* Compare content */
+            TRACE("Comparing file content with expected data");
+            if (memcmp(read_buffer, expected_content, expected_size) == 0) {
+                TRACE("Content validation: MATCH");
+                printf("    ASSERT: File content matches expected data - OK\n");
+            } else {
+                TRACE("Content validation: MISMATCH");
+                printf("    ASSERT: File content matches expected data - FAILED\n");
+                printf("TRACE: First 100 bytes of read content:\n");
+                printf("TRACE: '%.100s'\n", read_buffer);
+                printf("TRACE: First 100 bytes of expected content:\n");
+                printf("TRACE: '%.100s'\n", expected_content);
+                TEST_FAIL("File content should match expected data");
+                free(read_buffer);
+                CloseAsync(file);
+                return FALSE;
+            }
+            
+            free(read_buffer);
+        }
+        
+        result = CloseAsync(file);
+        TRACE_CLOSE(file, result);
+        TEST_ASSERT(result >= 0, "CloseAsync should succeed for content validation");
+    }
+    
+    TEST_PASS();
+    return TRUE;
 }
 
 /* Test OpenAsync and CloseAsync functions */
@@ -1530,4 +1660,5 @@ void print_test_summary(void)
     } else {
         printf("\nSOME TESTS FAILED! :(\n");
     }
+} 
 } 
