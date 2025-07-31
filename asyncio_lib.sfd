@@ -1,4 +1,7 @@
 * "asyncio.library"
+==license Original asyncio.library by Martin Taillefer
+==license Updates by Magnus Holmgren 1997
+==license Refactoring for Amiga NDK3.2 by amigazen project 2025
 ==base _AsyncIOBase
 ==basetype struct Library *
 ==libname asyncio.library
@@ -7,6 +10,7 @@
 ==typedef AsyncFile
 ==bias 30
 ==public
+==version 39.2
 AsyncFile * OpenAsync(STRPTR fileName, ULONG mode, LONG bufferSize) (A0,D0,D1)
 AsyncFile * OpenAsyncFromFH(BPTR handle, ULONG mode, LONG bufferSize) (A0,D0,D1)
 LONG CloseAsync(AsyncFile * file) (A0)

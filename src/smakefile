@@ -45,11 +45,11 @@ OBJS = \
 
 ###############################################################################
 
-LIBS = lib:sc.lib lib:amiga.lib lib:debug.lib
+LIBS = sc:lib/sc.lib lib:amiga.lib lib:debug.lib
 
 ###############################################################################
 
-all: $(NAME)
+all: $(NAME) linklibs dicelibs pragma
 
 ###############################################################################
 
@@ -63,9 +63,44 @@ $(NAME): $(OBJS)
 
 clean:
 	delete $(NAME) $(NAME).debug $(NAME).map $(OBJS) FD LVO PROTOS PRAGMAS RAM all
+	delete lib/asyncio.lib lib/asyncior.lib
+	delete dlib/asynciolibs.lib dlib/asynciolibsr.lib dlib/asyncios.lib dlib/asynciosr.lib
+	delete include/pragmas/asyncio_pragmas.h
 
 version:
 	bumprev $(VERSION) $(NAME)
+
+###############################################################################
+
+# Link libraries for normal linking (non-shared)
+linklibs: lib/asyncio.lib lib/asyncior.lib
+
+lib/asyncio.lib: $(OBJS)
+	slink $(OBJS) to $@ lib $(LIBS) $(LFLAGS) noicons
+
+lib/asyncior.lib: $(OBJS)
+	slink $(OBJS) to $@ lib $(LIBS) $(LFLAGS) noicons
+
+# DICE libraries for shared library linking
+dicelibs: dlib/asynciolibs.lib dlib/asynciolibsr.lib dlib/asyncios.lib dlib/asynciosr.lib
+
+dlib/asynciolibs.lib: asyncio_lib.sfd
+	FDToLib -o$@ $< -auto asyncio.library
+
+dlib/asynciolibsr.lib: asyncio_lib.sfd
+	FDToLib -o$@ $< -mr -hasynciolibsr.h -auto asyncio.library
+
+dlib/asyncios.lib:
+	LbMake asyncio s
+
+dlib/asynciosr.lib:
+	LbMake asyncio s r
+
+# Pragma file generation
+pragma: include/pragmas/asyncio_pragmas.h
+
+include/pragmas/asyncio_pragmas.h: asyncio_lib.sfd
+	FDTOPragma -o$@ $<
 
 ###############################################################################
 
