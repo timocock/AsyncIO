@@ -1,0 +1,37 @@
+* "asyncio.library"
+==license Copyright 2024 AsyncIO Library Contributors
+==license
+==license This program is free software: you can redistribute it and/or modify
+==license it under the terms of the GNU Lesser General Public License as published by
+==license the Free Software Foundation, version 2.1 of the License.
+==license
+==license This program is distributed in the hope that it will be useful,
+==license but WITHOUT ANY WARRANTY; without even the implied warranty of
+==license MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+==license GNU Lesser General Public License for more details.
+==license
+==license You should have received a copy of the GNU Lesser General Public License
+==license along with this program.  If not, see <http://www.gnu.org/licenses/>.
+==base _AsyncIOBase
+==basetype struct Library *
+==libname asyncio.library
+==include <libraries/asyncio.h>
+==include <dos/dos.h>
+==typedef AsyncFile
+==bias 30
+==public
+AsyncFile * OpenAsync(STRPTR fileName, ULONG mode, LONG bufferSize) (A0,D0,D1)
+AsyncFile * OpenAsyncFromFH(BPTR handle, ULONG mode, LONG bufferSize) (A0,D0,D1)
+LONG CloseAsync(AsyncFile * file) (A0)
+LONG SeekAsync(AsyncFile * file, LONG position, LONG mode) (A0,D0,D1)
+LONG ReadAsync(AsyncFile * file, APTR buffer, LONG bytes) (A0,A1,D0)
+LONG WriteAsync(AsyncFile * file, APTR buffer, LONG bytes) (A0,A1,D0)
+LONG ReadCharAsync(AsyncFile * file) (A0)
+LONG WriteCharAsync(AsyncFile * file, ULONG ch) (A0,D0)
+LONG ReadLineAsync(AsyncFile * file, STRPTR buf, LONG bytes) (A0,A1,D0)
+LONG WriteLineAsync(AsyncFile * file, STRPTR buf) (A0,A1)
+STRPTR FGetsAsync(AsyncFile * file, STRPTR buf, LONG bytes) (A0,A1,D0)
+STRPTR FGetsLenAsync(AsyncFile * file, STRPTR buf, LONG bytes, LONG * length) (A0,A1,D0,A2)
+LONG PeekAsync(AsyncFile * file, APTR buffer, LONG bytes) (A0,A1,D0)
+==private
+==end 
